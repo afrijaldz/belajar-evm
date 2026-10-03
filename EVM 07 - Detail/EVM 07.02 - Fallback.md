@@ -100,7 +100,7 @@ cadangan di dispatcher.
 ## Kegunaan utama: proxy
 
 Proxy adalah kontrak yang hampir tidak punya fungsi sendiri. Semua panggilan jatuh ke
-`fallback()`, lalu diteruskan dengan `delegatecall` ke kontrak logika. Kode logika berjalan,
+`fallback()`, lalu diteruskan dengan `delegatecall` ke kontrak logika (lihat [EVM 17.01 - delegatecall](../EVM%2017%20-%20Detail/EVM%2017.01%20-%20delegatecall.md)). Kode logika berjalan,
 tetapi storage yang dipakai milik proxy (lihat [EVM 17 - Proxy dan Upgrade](../EVM%2017%20-%20Proxy%20dan%20Upgrade.md)).
 
 ```

@@ -65,7 +65,7 @@ asing, ikuti link-nya mundur.
 | 14 | [EVM 14 - Swap dari Kontrak dan Sandwich](EVM%2014%20-%20Swap%20dari%20Kontrak%20dan%20Sandwich.md) | deadline, `amountOutMin`, simulasi sandwich, quote on-chain bukan proteksi | `swap` | — |
 | 15 | [EVM 15 - Uniswap v3 Likuiditas Terkonsentrasi](EVM%2015%20-%20Uniswap%20v3%20Likuiditas%20Terkonsentrasi.md) | `sqrtPriceX96` dan tick, v3 vs v2, posisi sempit/lebar/penuh, keluar rentang | `uniswap-v3` | — |
 | 16 | [EVM 16 - Buyback-and-Burn Sendiri](EVM%2016%20-%20Buyback-and-Burn%20Sendiri.md) | desain keeper (CAKE) vs lelang (UNI), sandwich, kebocoran, threshold | `buyback` | — |
-| 17 | [EVM 17 - Proxy dan Upgrade](EVM%2017%20-%20Proxy%20dan%20Upgrade.md) | `delegatecall`, tabrakan storage, EIP-1967, upgrade append-only, initializer, UUPS, Safe dan USDC | `proxy` | — |
+| 17 | [EVM 17 - Proxy dan Upgrade](EVM%2017%20-%20Proxy%20dan%20Upgrade.md) | `delegatecall`, tabrakan storage, EIP-1967, upgrade append-only, initializer, UUPS, Safe dan USDC; detail di folder `EVM 17 - Detail/` (`EVM 17.01`) | `proxy` | — |
 | 18 | [EVM 18 - Security Basics](EVM%2018%20-%20Security%20Basics.md) | oracle spot vs TWAP + flash loan Morpho, `tx.origin`, **checklist auditor** | `security` | — |
 | **Fase 4** | **Production** | | | |
 | 19 | [EVM 19 - Testing Lanjutan](EVM%2019%20-%20Testing%20Lanjutan.md) | coverage cabang, differential vs router asli, ghost variable, shrinking, fork cache | `vault-project`, `swap` | — |

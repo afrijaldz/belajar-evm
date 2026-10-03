@@ -1,7 +1,7 @@
 ---
 title: EVM 17 - Proxy dan Upgrade
 tags: [learning, evm, solidity, proxy, upgrade, security]
-updated: 2026-09-24
+updated: 2026-10-03
 ---
 
 # Proxy dan Upgrade
@@ -24,6 +24,10 @@ Proxy meneruskan setiap panggilan lewat `delegatecall` ke kontrak logika. Kode l
 | Code size | 542 byte | 1.227 byte |
 
 Constructor logika berjalan di kontrak logika, bukan di proxy → setup lewat **`initialize`**.
+
+### Penjelasan detail
+
+1. [EVM 17.01 - delegatecall](EVM%2017%20-%20Detail/EVM%2017.01%20-%20delegatecall.md) — `call` vs `delegatecall` (storage, `msg.sender`, `address(this)`, ETH), opcode `0xf4`, delegatecall ke alamat tanpa kode, pengambilalihan wallet, insiden Parity
 
 ## Bug 1: tabrakan storage
 
