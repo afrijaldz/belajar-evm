@@ -1,7 +1,7 @@
 ---
 title: EVM 07 - Dasar Solidity
 tags: [learning, evm, solidity, foundry]
-updated: 2026-09-24
+updated: 2026-10-03
 ---
 
 # Dasar Solidity
@@ -94,6 +94,16 @@ Tiga jenis revert data yang sudah ditemui:
 | `Error(string)` | `0x08c379a0` | `require` dengan pesan ([EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md)) |
 | `Panic(uint256)` | `0x4e487b71` | overflow, bagi nol, enum |
 | Custom error | keccak nama | `InvalidNonce()` Firepit, `NotOwner(address)` |
+
+## 6. Menerima ETH: `payable`, `receive()`, `fallback()`
+
+Kontrak menolak ETH kecuali ETH itu masuk lewat fungsi `payable`, `receive()` (calldata
+kosong), atau `fallback()` yang `payable` (selector tidak cocok). Kode: `src/Payable.sol`,
+`test/Payable.t.sol`.
+
+### Penjelasan detail
+
+1. [EVM 07.01 - Payable dan receive](EVM%2007%20-%20Detail/EVM%2007.01%20-%20Payable%20dan%20receive.md) — Kapan `receive()`/`fallback()` jalan, pemeriksaan `CALLVALUE` di bytecode, stipend 2.300 gas `transfer`/`send`, ETH paksa lewat `selfdestruct`
 
 ## Latihan: `src/Exercise.sol`
 
