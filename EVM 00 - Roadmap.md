@@ -54,7 +54,7 @@ asing, ikuti link-nya mundur.
 | 05 | [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md) | fork BSC, archive node, impersonate, `setStorageAt`, `forge test` di fork | `account-model` | — |
 | 06 | [EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md) | bot searcher, Firepit + TokenJar, burn UNI sendiri, aturan mint 2% | — | — |
 | **Fase 2** | **Solidity dan Token** | | | |
-| 07 | [EVM 07 - Dasar Solidity](EVM%2007%20-%20Dasar%20Solidity.md) | overflow, packing, storage/memory/calldata, visibility, modifier, custom error, `payable`/`receive()`; detail di folder `EVM 07 - Detail/` (`EVM 07.01`) | `solidity-basics` | ☐ `DepositBank` |
+| 07 | [EVM 07 - Dasar Solidity](EVM%2007%20-%20Dasar%20Solidity.md) | overflow, packing, storage/memory/calldata, visibility, modifier, custom error, `payable`/`receive()`; detail di folder `EVM 07 - Detail/` (`EVM 07.01`–`07.02`) | `solidity-basics` | ☐ `DepositBank` |
 | 08 | [EVM 08 - ERC-20 dari Nol](EVM%2008%20-%20ERC-20%20dari%20Nol.md) | token dari nol, fuzz test, bug self-transfer | `solidity-basics` | ☐ `burn` |
 | 09 | [EVM 09 - Bahaya Approval ERC-20](EVM%2009%20-%20Bahaya%20Approval%20ERC-20.md) | race approve, unlimited approve, phishing permit, USDT | `solidity-basics` | — |
 | 10 | [EVM 10 - Burn _burn vs 0xdead](EVM%2010%20-%20Burn%20_burn%20vs%200xdead.md) | dua gaya burn, supply efektif, peta pola burn riset | `solidity-basics` | — |

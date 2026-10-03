@@ -6,7 +6,7 @@ updated: 2026-10-03
 
 # Payable dan receive()
 
-Bagian dari [EVM 07 - Dasar Solidity](../EVM%2007%20-%20Dasar%20Solidity.md)
+Bagian dari [EVM 07 - Dasar Solidity](../EVM%2007%20-%20Dasar%20Solidity.md) · [EVM 07.02 - Fallback](EVM%2007.02%20-%20Fallback.md) →
 
 **Secara default, kontrak Solidity menolak ETH.** Ada tiga cara agar kontrak bisa menerima
 ETH:
@@ -170,4 +170,4 @@ saldo di variabel sendiri yang hanya bertambah lewat fungsi deposit. Ini juga al
 
 ---
 
-Bagian dari [EVM 07 - Dasar Solidity](../EVM%2007%20-%20Dasar%20Solidity.md)
+Bagian dari [EVM 07 - Dasar Solidity](../EVM%2007%20-%20Dasar%20Solidity.md) · [EVM 07.02 - Fallback](EVM%2007.02%20-%20Fallback.md) →

@@ -104,6 +104,7 @@ kosong), atau `fallback()` yang `payable` (selector tidak cocok). Kode: `src/Pay
 ### Penjelasan detail
 
 1. [EVM 07.01 - Payable dan receive](EVM%2007%20-%20Detail/EVM%2007.01%20-%20Payable%20dan%20receive.md) — Kapan `receive()`/`fallback()` jalan, pemeriksaan `CALLVALUE` di bytecode, stipend 2.300 gas `transfer`/`send`, ETH paksa lewat `selfdestruct`
+2. [EVM 07.02 - Fallback](EVM%2007%20-%20Detail/EVM%2007.02%20-%20Fallback.md) — Kapan `fallback()` jalan, dua bentuk penulisan, posisinya di dispatcher bytecode, dan pemakaiannya di proxy (contoh USDC)
 
 ## Latihan: `src/Exercise.sol`
 
