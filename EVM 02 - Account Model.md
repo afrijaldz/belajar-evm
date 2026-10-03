@@ -1,7 +1,7 @@
 ---
 title: EVM 02 - Account Model
 tags: [learning, evm, ethereum, bsc, on-chain]
-updated: 2026-09-24
+updated: 2026-10-03
 ---
 
 # Account Model EVM
@@ -23,6 +23,10 @@ Project praktik: `~/Documents/riset/evm/account-model` (template `forge init`, k
 | `nonce` | jumlah transaksi yang **dikirim** | mulai dari **1** (EIP-161), menghitung kontrak yang ia buat |
 | `code` | kosong (`0x`) | bytecode, tidak bisa diubah setelah deploy |
 | `storage` | selalu kosong | slot 32-byte, key → value |
+
+### Penjelasan detail
+
+1. [EVM 02.01 - EOA dan Contract Account](EVM%2002%20-%20Detail/EVM%2002.01%20-%20EOA%20dan%20Contract%20Account.md) — Apa itu EOA dan contract account, siapa yang mengendalikan, cara lahir, cara membedakan
 
 ## EOA
 
