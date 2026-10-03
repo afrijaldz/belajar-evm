@@ -6,7 +6,7 @@ updated: 2026-10-03
 
 # EOA dan Contract Account
 
-Bagian dari [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md)
+Bagian dari [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) · [EVM 02.02 - Nonce](EVM%2002.02%20-%20Nonce.md) →
 
 Di EVM hanya ada **dua jenis akun**. Bedanya ada pada **siapa yang mengendalikan** akun itu.
 
@@ -95,4 +95,4 @@ Membuat masing-masing di anvil:
 
 ---
 
-Bagian dari [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md)
+Bagian dari [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) · [EVM 02.02 - Nonce](EVM%2002.02%20-%20Nonce.md) →

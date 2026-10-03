@@ -27,6 +27,7 @@ Project praktik: `~/Documents/riset/evm/account-model` (template `forge init`, k
 ### Penjelasan detail
 
 1. [EVM 02.01 - EOA dan Contract Account](EVM%2002%20-%20Detail/EVM%2002.01%20-%20EOA%20dan%20Contract%20Account.md) — Apa itu EOA dan contract account, siapa yang mengendalikan, cara lahir, cara membedakan
+2. [EVM 02.02 - Nonce](EVM%2002%20-%20Detail/EVM%2002.02%20-%20Nonce.md) — Nomor urut akun: anti-replay, urutan tx, ganti tx di mempool, nonce kontrak, alamat kontrak
 
 ## EOA
 
