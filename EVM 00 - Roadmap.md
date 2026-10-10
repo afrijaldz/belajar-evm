@@ -166,7 +166,6 @@ saat sesi terkait:
 - evm.codes (opcode dan gas): https://www.evm.codes/
 - OpenZeppelin Contracts: https://docs.openzeppelin.com/contracts/
 - BNB Chain docs: https://docs.bnbchain.org/
-- Blog dan berita blockchain/EVM untuk dibaca rutin: Sumber Bacaan Blockchain dan EVM
 
 ## Environment (2026-09-24)
 
