@@ -6,7 +6,7 @@ updated: 2026-10-10
 
 # Slashing
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.15 - Validator Client](EVM%2001.15%20-%20Validator%20Client.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.15 - Validator Client](EVM%2001.15%20-%20Validator%20Client.md) · [EVM 01.17 - Attestation](EVM%2001.17%20-%20Attestation.md) →
 
 Pertanyaan: slashing itu gimana cara kerjanya?
 
@@ -106,4 +106,4 @@ Data dari Beacon API publicnode.
 
 ---
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.15 - Validator Client](EVM%2001.15%20-%20Validator%20Client.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.15 - Validator Client](EVM%2001.15%20-%20Validator%20Client.md) · [EVM 01.17 - Attestation](EVM%2001.17%20-%20Attestation.md) →

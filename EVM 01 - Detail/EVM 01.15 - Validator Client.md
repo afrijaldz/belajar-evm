@@ -41,15 +41,15 @@ validator 32 ETH).
 1. Setiap epoch (32 slot = 6,4 menit) bertanya ke beacon node: "validator saya dapat tugas
    apa?" lewat `/eth/v1/validator/duties/proposer/{epoch}` dan endpoint attester.
 2. Setiap epoch, setiap validator wajib memberi satu **attestation** (suara untuk blok yang
-   dianggap benar).
+   dianggap benar, lihat [EVM 01.17 - Attestation](EVM%2001.17%20-%20Attestation.md)).
 3. Kalau dapat giliran membuat blok: minta beacon node menyiapkan blok (beacon node meminta
    isinya ke execution client, lihat [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md)),
    tanda tangani, lalu kirim kembali ke beacon node untuk disebar.
 4. Menyimpan **slashing protection database**: catatan semua yang sudah ditandatangani, supaya
    tidak pernah menandatangani dua hal yang bertentangan.
 
-Langkah 2 dan 4 dari pengetahuan umum; yang dicek langsung cuma jadwal pembuat blok (lihat
-Bukti).
+Langkah 4 dari pengetahuan umum. Jadwal pembuat blok dicek di Bukti di bawah; langkah 2 (satu
+attestation per epoch) dicek lewat data komite di [EVM 01.17 - Attestation](EVM%2001.17%20-%20Attestation.md).
 
 ## Kenapa dipisah dari beacon node
 
