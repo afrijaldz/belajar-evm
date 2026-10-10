@@ -35,6 +35,7 @@ Setiap bagian definisi di atas dijelaskan di file terpisah, folder `EVM 01 - Det
 13. [EVM 01.13 - EVM, Node, dan Validator](EVM%2001%20-%20Detail/EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md) — EVM bukan node atau validator: EVM ada di dalam node, validator adalah peran
 14. [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001%20-%20Detail/EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md) — Execution client (isi blok, EVM, state) vs consensus client (blok mana yang sah, PoS), Engine API
 15. [EVM 01.15 - Validator Client](EVM%2001%20-%20Detail/EVM%2001.15%20-%20Validator%20Client.md) — Validator client: program terpisah pemegang kunci, terhubung ke beacon node, slashing, dua jenis kunci
+16. [EVM 01.16 - Slashing](EVM%2001%20-%20Detail/EVM%2001.16%20-%20Slashing.md) — Slashing: tiga pelanggaran, alur hukuman, penalti korelasi, kasus 17 validator double vote (Agustus 2026)
 
 ### Native token
 

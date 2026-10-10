@@ -47,7 +47,7 @@ asing, ikuti link-nya mundur.
 | ---: | --- | --- | --- | --- |
 | 00 | (catatan ini) | peta belajar, progress, environment | — | — |
 | **Fase 1** | **Dasar EVM** | | | |
-| 01 | [EVM 01 - EVM vs Non-EVM](EVM%2001%20-%20EVM%20vs%20Non-EVM.md) | mesin vs native token, BEP-20 = ERC-20, HyperCore vs HyperEVM; detail per komponen (opcode, stack, memory, storage, PC, gas, alamat, RPC, native token, EVM vs node vs validator, execution vs consensus client, validator client) di folder `EVM 01 - Detail/` (`EVM 01.01`–`01.15`) | — | — |
+| 01 | [EVM 01 - EVM vs Non-EVM](EVM%2001%20-%20EVM%20vs%20Non-EVM.md) | mesin vs native token, BEP-20 = ERC-20, HyperCore vs HyperEVM; detail per komponen (opcode, stack, memory, storage, PC, gas, alamat, RPC, native token, EVM vs node vs validator, execution vs consensus client, validator client, slashing) di folder `EVM 01 - Detail/` (`EVM 01.01`–`01.16`) | — | — |
 | 02 | [EVM 02 - Account Model](EVM%2002%20-%20Account%20Model.md) | empat field akun, alamat kontrak, storage mentah, `0xdead`, EIP-7702; detail di folder `EVM 02 - Detail/` (`EVM 02.01`–`02.02`) | `account-model` | — |
 | 03 | [EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md) | anatomi transaksi, EIP-1559, rumus base fee, harga calldata/storage, log | `account-model` | — |
 | 04 | [EVM 04 - ABI](EVM%2004%20-%20ABI.md) | selector, encoding, event, decode transaksi burn CAKE | `account-model` | — |
@@ -166,6 +166,7 @@ saat sesi terkait:
 - evm.codes (opcode dan gas): https://www.evm.codes/
 - OpenZeppelin Contracts: https://docs.openzeppelin.com/contracts/
 - BNB Chain docs: https://docs.bnbchain.org/
+- Blog dan berita blockchain/EVM untuk dibaca rutin: Sumber Bacaan Blockchain dan EVM
 
 ## Environment (2026-09-24)
 

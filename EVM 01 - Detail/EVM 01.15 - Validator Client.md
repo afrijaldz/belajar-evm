@@ -6,7 +6,7 @@ updated: 2026-10-10
 
 # Validator Client
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md) · [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md) →
 
 Pertanyaan: validator client itu jalan di mana?
 
@@ -81,7 +81,7 @@ atau terpisah.
 
 Kalau kunci yang sama jalan di dua validator client, keduanya bisa menandatangani dua blok
 atau dua suara yang bertentangan. Itu **slashing**: sebagian stake dipotong dan validator
-dikeluarkan paksa. Karena itu, saat pindah mesin, VC lama harus dimatikan dulu dan slashing
+dikeluarkan paksa (cara kerjanya di [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md)). Karena itu, saat pindah mesin, VC lama harus dimatikan dulu dan slashing
 protection database ikut dipindah.
 
 ## Dua kunci yang berbeda
@@ -110,4 +110,4 @@ Data dari Beacon API dan JSON-RPC publicnode.
 
 ---
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md) · [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md) →
