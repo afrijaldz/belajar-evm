@@ -1,12 +1,12 @@
 ---
 title: EVM 01.12 - Native Token
 tags: [learning, evm, native-token]
-updated: 2026-10-03
+updated: 2026-10-10
 ---
 
 # Native Token
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md) · [EVM 01.13 - EVM, Node, dan Validator](EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md) →
 
 **Native token** adalah koin yang **dibangun langsung ke dalam protokol chain**, bukan dibuat
 oleh smart contract. ETH di Ethereum, BNB di BSC, POL di Polygon, AVAX di Avalanche C-Chain.
@@ -77,4 +77,4 @@ Native atau bukan itu soal **chain**, bukan soal nama koin:
 
 ---
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md) · [EVM 01.13 - EVM, Node, dan Validator](EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md) →

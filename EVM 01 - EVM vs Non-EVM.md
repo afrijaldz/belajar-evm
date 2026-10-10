@@ -1,7 +1,7 @@
 ---
 title: EVM 01 - EVM vs Non-EVM
 tags: [learning, ethereum, evm, bsc, solana, hyperliquid]
-updated: 2026-10-03
+updated: 2026-10-10
 ---
 
 # EVM vs Non-EVM
@@ -32,6 +32,7 @@ Setiap bagian definisi di atas dijelaskan di file terpisah, folder `EVM 01 - Det
 10. [EVM 01.10 - Format Alamat 0x](EVM%2001%20-%20Detail/EVM%2001.10%20-%20Format%20Alamat%200x.md) — Arti "format alamat 0x… yang sama"
 11. [EVM 01.11 - RPC eth](EVM%2001%20-%20Detail/EVM%2001.11%20-%20RPC%20eth.md) — Arti "melayani RPC eth_* yang sama" + daftar method RPC
 12. [EVM 01.12 - Native Token](EVM%2001%20-%20Detail/EVM%2001.12%20-%20Native%20Token.md) — Native token vs token ERC-20: disimpan di mana, cara kirim/cek, WETH
+13. [EVM 01.13 - EVM, Node, dan Validator](EVM%2001%20-%20Detail/EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md) — EVM bukan node atau validator: EVM ada di dalam node, validator adalah peran
 
 ### Native token
 
