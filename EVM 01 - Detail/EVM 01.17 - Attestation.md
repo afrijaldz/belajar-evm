@@ -6,7 +6,7 @@ updated: 2026-10-10
 
 # Attestation
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md) · [EVM 01.18 - Finality](EVM%2001.18%20-%20Finality.md) →
 
 Pertanyaan: attestation itu gimana cara kerjanya?
 
@@ -20,7 +20,8 @@ Suara ini dipakai untuk dua hal:
    dukungan suara terbanyak.
 2. **Finality.** Kalau minimal 2/3 total stake mendukung checkpoint yang sama, checkpoint itu
    jadi *justified*. Dua checkpoint berturut-turut justified → yang lebih awal jadi
-   *finalized* dan tidak bisa dibatalkan tanpa 1/3 stake kena slashing.
+   *finalized* dan tidak bisa dibatalkan tanpa 1/3 stake kena slashing (detailnya di
+   [EVM 01.18 - Finality](EVM%2001.18%20-%20Finality.md)).
 
 ## Isi satu attestation
 
@@ -90,4 +91,4 @@ Data dari Beacon API publicnode.
 
 ---
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md) · [EVM 01.18 - Finality](EVM%2001.18%20-%20Finality.md) →

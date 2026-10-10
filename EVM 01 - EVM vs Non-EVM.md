@@ -38,6 +38,7 @@ Setiap bagian definisi di atas dijelaskan di file terpisah, folder `EVM 01 - Det
 15. [EVM 01.15 - Validator Client](EVM%2001%20-%20Detail/EVM%2001.15%20-%20Validator%20Client.md) — Validator client: program terpisah pemegang kunci, terhubung ke beacon node, slashing, dua jenis kunci
 16. [EVM 01.16 - Slashing](EVM%2001%20-%20Detail/EVM%2001.16%20-%20Slashing.md) — Slashing: tiga pelanggaran, alur hukuman, penalti korelasi, kasus 17 validator double vote (Agustus 2026)
 17. [EVM 01.17 - Attestation](EVM%2001%20-%20Detail/EVM%2001.17%20-%20Attestation.md) — Attestation: isi suara, komite per slot, agregasi BLS, fork choice dan finality
+18. [EVM 01.18 - Finality](EVM%2001%20-%20Detail/EVM%2001.18%20-%20Finality.md) — Finality: checkpoint, justified, finalized, kenapa 2/3, tag `safe`/`finalized`, fast finality BSC
 
 ### Native token
 
