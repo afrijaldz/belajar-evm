@@ -6,7 +6,7 @@ updated: 2026-10-10
 
 # EVM, Node, dan Validator
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.12 - Native Token](EVM%2001.12%20-%20Native%20Token.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.12 - Native Token](EVM%2001.12%20-%20Native%20Token.md) · [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md) →
 
 Pertanyaan: EVM itu node blockchain yang menjadi validator?
 
@@ -65,7 +65,8 @@ sungguhan (lihat [EVM 01.05 - Environment](EVM%2001.05%20-%20Environment.md)).
   dan RPC `eth_*`.
 - **Consensus client** (Prysm, Lighthouse, Teku, Nimbus, Lodestar): PoS, memilih rantai
   yang benar, dan menentukan siapa yang membuat blok.
-- Keduanya berbicara lewat Engine API (`engine_*`, lihat [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md)).
+- Keduanya berbicara lewat Engine API (`engine_*`, lihat [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md)). Perbedaan
+  keduanya dijelaskan di [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md).
 - Validator = dua program di atas + **validator client** yang memegang kunci validator.
 
 **BSC** cuma satu program (fork geth) yang menggabungkan eksekusi dan konsensus PoSA.
@@ -89,9 +90,10 @@ Catatan untuk field `miner`:
   pengetahuan umum; yang dicek cuma jumlah blok per alamat, bukan urutannya.
 - **Ethereum:** isinya *fee recipient*, bukan identitas validator. Sejak MEV-Boost banyak blok
   disusun builder, jadi alamat yang muncul sering milik builder. Validator Ethereum dikenali
-  lewat *proposer index* di beacon chain, yang tidak ada di blok execution. Ini dari pengetahuan
-  umum; belum dicek lewat beacon API.
+  lewat *proposer index* di beacon chain, yang tidak ada di blok execution. Sudah dicek lewat
+  Beacon API: blok 26.160.253 dibuat validator nomor 2.092.386 (stake 32 ETH), sementara
+  `miner`-nya cuma `0x3963…aa49` (lihat [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md)).
 
 ---
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.12 - Native Token](EVM%2001.12%20-%20Native%20Token.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.12 - Native Token](EVM%2001.12%20-%20Native%20Token.md) · [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md) →
