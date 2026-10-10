@@ -6,7 +6,7 @@ updated: 2026-10-10
 
 # Execution Client dan Consensus Client
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.13 - EVM, Node, dan Validator](EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.13 - EVM, Node, dan Validator](EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md) · [EVM 01.15 - Validator Client](EVM%2001.15%20-%20Validator%20Client.md) →
 
 Pertanyaan: execution client dan consensus client bedanya apa?
 
@@ -36,7 +36,8 @@ transaksi.
 | Asal-usul | software Ethereum sejak awal (era PoW) | beacon chain, jalan terpisah sejak Desember 2020 sampai digabung di The Merge |
 
 Validator butuh program ketiga, **validator client**, yang memegang kunci dan menandatangani
-blok dan attestation. Program ini terhubung ke consensus client, bukan ke execution client.
+blok dan attestation. Program ini terhubung ke consensus client, bukan ke execution client
+(lihat [EVM 01.15 - Validator Client](EVM%2001.15%20-%20Validator%20Client.md)).
 
 ## Satu blok Ethereum = dua lapis
 
@@ -103,4 +104,4 @@ Data dari publicnode: Beacon API `ethereum-beacon-api.publicnode.com` dan JSON-R
 
 ---
 
-Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.13 - EVM, Node, dan Validator](EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md)
+Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.13 - EVM, Node, dan Validator](EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md) · [EVM 01.15 - Validator Client](EVM%2001.15%20-%20Validator%20Client.md) →
