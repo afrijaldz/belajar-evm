@@ -6,9 +6,10 @@ updated: 2026-10-10
 
 # EVM vs Non-EVM
 
-Pertanyaan awal: BSC itu EVM atau bukan, padahal native token-nya BNB, bukan ETH?
+Pertanyaan: apa itu EVM, dan kapan sebuah chain disebut chain EVM?
 
-**Jawaban: BSC adalah EVM.** Native token tidak menentukan EVM atau bukan.
+**EVM adalah mesin eksekusinya, bukan koin atau chain tertentu.** Ethereum, BSC, Polygon,
+Base, Arbitrum, dan Avalanche C-Chain semuanya chain EVM, walaupun native token-nya berbeda.
 
 ## EVM itu mesinnya, bukan koinnya
 
@@ -56,16 +57,19 @@ Penjelasan detail: [EVM 01.12 - Native Token](EVM%2001%20-%20Detail/EVM%2001.12%
 Analogi: EVM itu seperti Android. Samsung dan Xiaomi sama-sama Android walaupun mereknya
 berbeda, dan aplikasi yang sama bisa berjalan di keduanya.
 
-## Bukti dari riset sendiri (2026-09-24)
+## Bukti: perintah yang sama di chain berbeda (2026-09-24)
 
-Riset CAKE dan BNB di BSC (CAKE Diperiksa Ulang 2026-09-24, BNB Diperiksa Ulang 2026-09-24)
-memakai perintah yang **persis sama** dengan riset UNI dan ETHFI di Ethereum
+Membaca token di BSC (CAKE Diperiksa Ulang 2026-09-24, BNB Diperiksa Ulang 2026-09-24)
+memakai perintah yang **persis sama** dengan membaca token di Ethereum
 (UNI Diperiksa dengan Saringan Lima Chain, ETHFI Diperiksa dengan Saringan Lima Chain):
 
 - `eth_call` dengan selector `0x70a08231` (`balanceOf`) dan `0x18160ddd` (`totalSupply`)
 - `eth_getBalance` untuk membaca BNB di `0xdead`
-- `cast` (Foundry) jalan di BSC cukup dengan mengganti `--rpc-url`
+- `cast` (Foundry) pindah chain cukup dengan mengganti `--rpc-url`
 - alamat `0x000000000000000000000000000000000000dEaD` berlaku di kedua chain
+
+Hal yang sama berlaku di chain EVM lain: Base dan Arbitrum dibaca dengan cara yang sama di
+[EVM 23 - Multi-Chain](EVM%2023%20-%20Multi-Chain.md).
 
 Solana berbeda. Di sana dipakai `getTokenSupply` dan `getTokenAccountsByOwner` — API yang
 lain sama sekali — karena Solana **bukan EVM**. Model datanya juga beda: satu wallet bisa punya
@@ -74,12 +78,15 @@ RAY JUP ORCA Diperiksa Ulang 2026-09-24.
 
 ## Hal yang sering membingungkan
 
-- **BEP-20 = ERC-20.** Interface identik, cuma namanya diganti (Binance Evolution Proposal).
-  Karena itu kontrak CAKE punya `balanceOf`, `transfer`, dan seterusnya, sama seperti token
-  ERC-20 di Ethereum.
-- **"ETH" di BSC bukan ETH asli.** Itu token BEP-20 (Binance-Peg ETH) yang dijamin Binance.
-  Di BSC, ETH cuma token biasa; gas tetap dibayar dengan BNB.
-- **Kalau mesinnya sama, bedanya di mana?** Di lapisan lain:
+- **Native token tidak menentukan EVM atau bukan.** BSC memakai BNB dan Polygon memakai POL
+  untuk gas, tapi keduanya tetap chain EVM.
+- **Nama standar token bisa beda per chain, isinya sama.** BEP-20 di BSC = ERC-20: interface
+  identik, cuma namanya diganti (Binance Evolution Proposal). Karena itu kontrak CAKE punya
+  `balanceOf`, `transfer`, dan seterusnya, sama seperti token ERC-20 di Ethereum.
+- **Token bernama "ETH" di chain lain biasanya bukan ETH asli.** Contohnya "ETH" di BSC: token
+  BEP-20 (Binance-Peg ETH) yang dijamin Binance. Di sana ETH cuma token biasa; gas tetap
+  dibayar dengan BNB.
+- **Kalau mesinnya sama, bedanya di mana?** Di lapisan lain. Contoh Ethereum vs BSC:
 
   | | Ethereum | BSC |
   | --- | --- | --- |
@@ -89,8 +96,8 @@ RAY JUP ORCA Diperiksa Ulang 2026-09-24.
   | Chain ID | 1 | 56 |
 
   Chain ID dipakai wallet untuk membedakan chain yang mesinnya sama.
-- **Kode node:** BSC adalah fork dari **go-ethereum (geth)**, client Ethereum. Secara teknis
-  BSC adalah "Ethereum yang dimodifikasi".
+- **Kode node:** banyak chain EVM memakai ulang client Ethereum. BSC adalah fork dari
+  **go-ethereum (geth)**, jadi secara teknis BSC adalah "Ethereum yang dimodifikasi".
 - **Hyperliquid punya dua bagian:**
   - **HyperCore** — orderbook perp, **non-EVM**, diakses lewat `api.hyperliquid.xyz`
   - **HyperEVM** — EVM, gas pakai HYPE

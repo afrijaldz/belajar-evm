@@ -16,8 +16,9 @@ Project praktik ada di `~/Documents/riset/evm/` — lihat kolom Kode di tabel ur
 
 Konvensi nama catatan sesi baru: `EVM NN - Judul.md` (dua digit).
 
-Satu chain untuk praktik: **Ethereum mainnet fork + BSC fork** lewat `anvil`. Mesinnya sama
-(lihat [EVM 01 - EVM vs Non-EVM](EVM%2001%20-%20EVM%20vs%20Non-EVM.md)), jadi semua materi berlaku di keduanya.
+Praktik memakai `anvil` lokal dan fork chain EVM sungguhan, terutama Ethereum dan BSC (Base
+dan Arbitrum di Sesi 23). Mesinnya sama (lihat [EVM 01 - EVM vs Non-EVM](EVM%2001%20-%20EVM%20vs%20Non-EVM.md)), jadi semua materi
+berlaku di semua chain EVM.
 
 ## Status modul (2026-10-03)
 
