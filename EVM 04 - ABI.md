@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # ABI EVM
 
-Catatan dari Sesi 4 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Semua hasil observasi langsung dengan `cast`
+Semua hasil observasi langsung dengan `cast`
 (Foundry 1.7.1), `anvil` lokal, dan satu transaksi nyata di BSC. Lanjutan dari
 [EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md).
 

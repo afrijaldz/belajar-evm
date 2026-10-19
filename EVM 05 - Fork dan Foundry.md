@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # Fork dan Foundry EVM
 
-Catatan dari Sesi 5 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Semua hasil observasi langsung: `anvil` fork BSC
+Semua hasil observasi langsung: `anvil` fork BSC
 di blok **123.136.365** (satu blok sebelum transaksi burn mingguan CAKE 2026-09-21), `cast`, dan
-`forge test` (Foundry 1.7.1). Lanjutan dari [EVM 04 - ABI](EVM%2004%20-%20ABI.md).
+`forge test` (Foundry 1.7.1).
 
 Project praktik: `~/Documents/riset/evm/account-model`, test `test/CakeBurnFork.t.sol`.
 
@@ -80,10 +80,10 @@ diketahui, cocokkan dengan `balanceOf`.
 | **1** | **cocok** → `balances` di slot 1 |
 
 ```bash
-cast rpc anvil_setStorageAt <cake> $(cast index address <saya> 1) $(cast to-uint256 1000000000000000000000)
+cast rpc anvil_setStorageAt <cake> $(cast index address <akun> 1) $(cast to-uint256 1000000000000000000000)
 ```
 
-Hasil: saldo saya 0 → **1.000 CAKE**, transfer 100 ke `0xdead` sukses, tapi **`totalSupply` tidak
+Hasil: saldo 0 → **1.000 CAKE**, transfer 100 ke `0xdead` sukses, tapi **`totalSupply` tidak
 berubah** — jumlah saldo kini > `totalSupply`. Menulis storage melewati semua logika dan bisa
 merusak invariant. Cheatcode `deal()` Foundry melakukan hal yang sama.
 

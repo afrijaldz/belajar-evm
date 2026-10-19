@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # Mini Project Vault
 
-Catatan dari Sesi 12 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24 — **penutup Fase 2**. Vault deposit/withdraw ETH +
+Vault deposit/withdraw ETH +
 ERC-20 yang menggabungkan Sesi 7–11, diuji dengan 12 test unit + 2 invariant (256.000 panggilan
-acak). Lanjutan dari [EVM 11 - Events dan Indexing](EVM%2011%20-%20Events%20dan%20Indexing.md).
+acak).
 
 Project: `~/Documents/riset/evm/vault-project` — `src/Vault.sol` (benar), `src/NaiveVault.sol`
 (sengaja salah), `src/mocks/MockTokens.sol`, `test/Vault.t.sol`, `test/VaultInvariant.t.sol`.

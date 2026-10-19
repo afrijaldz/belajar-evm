@@ -6,8 +6,8 @@ updated: 2026-09-24
 
 # Events dan Indexing
 
-Catatan dari Sesi 11 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Indexer mini ditulis sendiri, diuji di `anvil`,
-lalu dicoba ke RPC Ethereum publik. Lanjutan dari [EVM 10 - Burn _burn vs 0xdead](EVM%2010%20-%20Burn%20_burn%20vs%200xdead.md).
+Indexer mini ditulis sendiri, diuji di `anvil`,
+lalu dicoba ke RPC Ethereum publik.
 
 Project: `~/Documents/riset/evm/indexer` — `indexer.py` (rebuild saldo dari log, fetch adaptif),
 `make_activity.py` (60 transfer acak). Kontrak biaya: `solidity-basics/src/EventCost.sol`.

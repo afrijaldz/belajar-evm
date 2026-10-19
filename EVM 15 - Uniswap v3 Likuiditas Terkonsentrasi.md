@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # Uniswap v3: Likuiditas Terkonsentrasi
 
-Catatan dari Sesi 15 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Pool v3 WETH/USDC 0,05% dibaca di fork Ethereum
+Pool v3 WETH/USDC 0,05% dibaca di fork Ethereum
 (blok ~26.046.443, `eth.drpc.org`), dibandingkan dengan v2 dari [EVM 13 - AMM x·y=k](EVM%2013%20-%20AMM%20x%C2%B7y%3Dk.md), lalu tiga posisi
 dibuat sendiri. Pembanding Solana: Raydium CLMM (turunan langsung Uniswap v3).
 

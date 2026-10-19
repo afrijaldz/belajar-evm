@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # Gas Optimization
 
-Catatan dari Sesi 20 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Target: `Vault.sol` dari
+Target: `Vault.sol` dari
 [EVM 12 - Mini Project Vault](EVM%2012%20-%20Mini%20Project%20Vault.md) — jaring pengaman terlengkap (17 test, 3 invariant, cabang 100% dari
 [EVM 19 - Testing Lanjutan](EVM%2019%20-%20Testing%20Lanjutan.md)). Satu perubahan per langkah; setiap langkah wajib lolos semua test.
 

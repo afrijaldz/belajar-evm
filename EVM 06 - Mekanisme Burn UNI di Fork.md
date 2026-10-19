@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # Mekanisme Burn UNI di Fork
 
-Catatan dari Sesi 6 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Rekonstruksi buyback-burn UNI dari transaksi
+Rekonstruksi buyback-burn UNI dari transaksi
 nyata, lalu dijalankan sendiri di `anvil` fork Ethereum mainnet (blok ~26.046.123, RPC
 `eth.drpc.org`). Lanjutan dari [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md); melengkapi
 UNI Diperiksa dengan Saringan Lima Chain.

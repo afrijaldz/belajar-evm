@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # Security Basics
 
-Catatan dari Sesi 18 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24 — **penutup Fase 3**. Serangan oracle dengan flash
+Serangan oracle dengan flash
 loan Morpho Blue asli di fork Ethereum (blok ~26.046.522), perbaikannya dengan TWAP, jebakan `tx.origin`,
-dan checklist auditor dari seluruh sesi. Lanjutan dari [EVM 17 - Proxy dan Upgrade](EVM%2017%20-%20Proxy%20dan%20Upgrade.md).
+dan checklist auditor dari seluruh sesi.
 
 Project: `~/Documents/riset/evm/security` — `src/Lending.sol` (`SpotPriceSource`, `TwapPriceSource`,
 `Lender`), `src/Attacker.sol`, `src/TxOrigin.sol`, `test/Oracle.t.sol`, `test/TxOrigin.t.sol`.
@@ -61,6 +61,10 @@ kumulatif_sekarang = kumulatif_tersimpan + harga_reserve_sekarang × (now − bl
 Overflow kumulatif disengaja (`unchecked`), sama seperti Uniswap. Kelemahan TWAP: lambat mengikuti harga
 nyata, dan pool yang sangat dangkal tetap bisa dimanipulasi kalau penyerang sanggup menahan harga beberapa
 blok.
+
+### Penjelasan detail
+
+1. [EVM 18.01 - Flash Loan di Mata Auditor](EVM%2018%20-%20Detail/EVM%2018.01%20-%20Flash%20Loan%20di%20Mata%20Auditor.md) — flash loan sebagai fitur sah yang mematikan asumsi "penyerang tak bermodal"; checklist mengenali kode rentan (spot vs TWAP, state dibaca sebelum/sesudah input, `balanceOf` sebagai sumber kebenaran) dan pertahanannya
 
 ## Access control: `tx.origin`
 

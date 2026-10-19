@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # Capstone: SupplyWatch
 
-Catatan dari Sesi 24 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24 — **penutup modul**. Satu kontrak yang menggabungkan
+Satu kontrak yang menggabungkan
 Sesi 1–23: mencatat supply efektif token dan laju burn-nya **on-chain**, tanpa owner, bisa diaudit siapa
-pun. Lanjutan dari [EVM 23 - Multi-Chain](EVM%2023%20-%20Multi-Chain.md).
+pun.
 
 Project: `~/Documents/riset/evm/capstone` — `src/SupplyWatch.sol`, `test/SupplyWatch.t.sol` (6 unit + 2 fork),
 `script/DeploySupplyWatch.s.sol`.
@@ -107,7 +107,3 @@ constructor — penyerang bisa men-deploy duluan dengan owner-nya sendiri.
 - `sed` dengan pemisah `#` gagal kalau teks penggantinya berisi `#`.
 - Alamat test contract Foundry `0x5615…b72f` punya saldo di mainnet (ada yang pernah mengirim ke sana).
 
-## Belum dikerjakan
-
-Deploy sungguhan butuh saldo: dijalankan bersama Sesi 21 setelah faucet masuk
-([EVM 21 - Deploy ke Testnet dan Verifikasi](EVM%2021%20-%20Deploy%20ke%20Testnet%20dan%20Verifikasi.md)).

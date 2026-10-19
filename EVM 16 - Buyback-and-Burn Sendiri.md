@@ -6,10 +6,10 @@ updated: 2026-09-24
 
 # Buyback-and-Burn Sendiri
 
-Catatan dari Sesi 16 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Dua desain buyback-and-burn ditulis dan diuji di
+Dua desain buyback-and-burn ditulis dan diuji di
 fork Ethereum (blok 26.046.487) dengan token `GOV` sendiri + pool Uniswap v2 asli. Desainnya meniru dua
 mesin yang sudah dibongkar: pipeline CAKE ([EVM 04 - ABI](EVM%2004%20-%20ABI.md), [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md)) dan Firepit UNI
-([EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md)). Lanjutan dari [EVM 15 - Uniswap v3 Likuiditas Terkonsentrasi](EVM%2015%20-%20Uniswap%20v3%20Likuiditas%20Terkonsentrasi.md).
+([EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md)).
 
 Project: `~/Documents/riset/evm/buyback` — `src/GovToken.sol`, `src/BuybackBurner.sol`
 (`BuybackBurner` + `FeeAuction`), `test/Buyback.t.sol`.

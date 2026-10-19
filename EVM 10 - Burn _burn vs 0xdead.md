@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # Burn: `_burn()` vs `0xdead`
 
-Catatan dari Sesi 10 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Dua token identik yang cuma beda cara burn,
+Dua token identik yang cuma beda cara burn,
 diuji dengan Foundry (4 test) dan diukur gas-nya di `anvil`. Lanjutan dari
 [EVM 09 - Bahaya Approval ERC-20](EVM%2009%20-%20Bahaya%20Approval%20ERC-20.md). Ini sisi "menulis" dari temuan riset tokenomics.
 

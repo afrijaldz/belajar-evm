@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # ERC-20 dari Nol
 
-Catatan dari Sesi 8 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Token ditulis sendiri tanpa library, diuji
+Token ditulis sendiri tanpa library, diuji
 dengan Foundry (14 test, 2 di antaranya fuzz × 256 run), lalu di-deploy ke `anvil`. Lanjutan dari
 [EVM 07 - Dasar Solidity](EVM%2007%20-%20Dasar%20Solidity.md).
 
@@ -102,7 +102,11 @@ cd ~/Documents/riset/evm/solidity-basics && forge test --match-contract Exercise
 ```
 
 Test memakai low-level call supaya file tetap ter-compile sebelum `burn` ada. Sudah diverifikasi
-bisa diselesaikan. Status: ☐ belum dikerjakan
+bisa diselesaikan.
+
+## Bacaan lanjutan
+
+- B20 Token Standard Base (folder `Learning/Base/B20/`): ERC-20 versi Base untuk saham tokenisasi. Selector sama dengan MyToken, ditambah role, pause, policy allowlist/blocklist, multiplier untuk dividen/split, dan factory precompile
 
 ## Perintah
 

@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # Testing Lanjutan
 
-Catatan dari Sesi 19 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24 — sesi pertama Fase 4. Dasar fuzz/invariant/fork
+Dasar fuzz/invariant/fork
 sudah dipakai di [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md), [EVM 08 - ERC-20 dari Nol](EVM%2008%20-%20ERC-20%20dari%20Nol.md), [EVM 12 - Mini Project Vault](EVM%2012%20-%20Mini%20Project%20Vault.md).
 Sesi ini: coverage, differential testing, ghost variable, shrinking, fork test yang rapi. Lanjutan dari
 [EVM 18 - Security Basics](EVM%2018%20-%20Security%20Basics.md).

@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # Multi-Chain
 
-Catatan dari Sesi 23 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Empat mainnet dibaca langsung (Ethereum, BSC, Base,
+Empat mainnet dibaca langsung (Ethereum, BSC, Base,
 Arbitrum), dua di-fork (Base, BSC) untuk deploy; wallet testnet Sesi 21 masih 0, jadi tidak ada deploy
-sungguhan. Lanjutan dari [EVM 22 - Monitoring](EVM%2022%20-%20Monitoring.md).
+sungguhan.
 
 Script: `~/Documents/riset/evm/multichain/` — `chains.py`, `bridge.py` (langsung ke mainnet), `multichain.py`
 (butuh fork Base di port 8550 dan BSC di 8551, jalankan dari folder `vault-project`).

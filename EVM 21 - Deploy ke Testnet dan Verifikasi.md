@@ -6,9 +6,6 @@ updated: 2026-09-24
 
 # Deploy ke Testnet dan Verifikasi
 
-Catatan dari Sesi 21 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. **Status: persiapan selesai, deploy sungguhan
-menunggu saldo faucet.** Lanjutan dari [EVM 20 - Gas Optimization](EVM%2020%20-%20Gas%20Optimization.md).
-
 Project: `~/Documents/riset/evm/vault-project` — `script/DeployVault.s.sol`, `[rpc_endpoints]` di
 `foundry.toml`.
 

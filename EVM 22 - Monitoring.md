@@ -6,10 +6,8 @@ updated: 2026-09-24
 
 # Monitoring
 
-Catatan dari Sesi 22 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Monitor event + alert untuk `Vault` diuji di `anvil`
-dengan eksploit dan reorg simulasi, lalu pola yang sama dipakai di mainnet untuk laju burn UNI — dan
-membongkar koreksi untuk riset. Lanjutan dari [EVM 21 - Deploy ke Testnet dan Verifikasi](EVM%2021%20-%20Deploy%20ke%20Testnet%20dan%20Verifikasi.md) (Sesi 21 masih
-menunggu faucet; sesi ini tidak butuh deploy sungguhan).
+Monitor event + alert untuk `Vault` diuji di `anvil`
+dengan eksploit dan reorg simulasi, lalu pola yang sama dipakai di mainnet untuk laju burn UNI.
 
 Kode: `~/Documents/riset/evm/monitor/` — `monitor.py` (Vault), `uni_burn_rate.py` (mainnet).
 

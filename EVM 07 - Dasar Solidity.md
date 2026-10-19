@@ -6,8 +6,8 @@ updated: 2026-10-03
 
 # Dasar Solidity
 
-Catatan dari Sesi 7 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24 — sesi pertama Fase 2. Semua konsep dibuktikan
-lewat test Foundry (Solidity ^0.8.24, forge 1.7.1). Lanjutan dari [EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md).
+Semua konsep dibuktikan
+lewat test Foundry (Solidity ^0.8.24, forge 1.7.1).
 
 Project: `~/Documents/riset/evm/solidity-basics` — `src/` (Types, Packing, Locations, Vault,
 Exercise) dan `test/`. Jalankan: `forge test -vv`.
@@ -120,8 +120,6 @@ cd ~/Documents/riset/evm/solidity-basics && forge test --match-contract Exercise
 | 1 | `Deposit` pakai 4 slot | `uint256` selalu satu slot penuh. `address` = 20 byte, `uint64` = 8, `bool` = 1. Mana yang muat bareng? |
 | 2 | `withdraw` tidak menyimpan `withdrawn = true` | Lihat bagian 3 |
 | 3 | Siapa pun bisa withdraw | `error NotDepositOwner(address caller)` + modifier `onlyDepositOwner(uint256 id)` |
-
-Status: ☐ belum dikerjakan
 
 ## Jebakan
 

@@ -6,7 +6,7 @@ updated: 2026-10-03
 
 # Proxy dan Upgrade
 
-Catatan dari Sesi 17 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Proxy ditulis sendiri dan diuji dengan Foundry
+Proxy ditulis sendiri dan diuji dengan Foundry
 (9 test), lalu proxy nyata dibedah di BSC (Safe `0xceba…`) dan Ethereum (USDC). Lanjutan dari
 [EVM 16 - Buyback-and-Burn Sendiri](EVM%2016%20-%20Buyback-and-Burn%20Sendiri.md); menjawab proxy yang pertama kali ditemui di [EVM 02 - Account Model](EVM%2002%20-%20Account%20Model.md).
 

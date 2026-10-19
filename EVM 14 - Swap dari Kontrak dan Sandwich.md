@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # Swap dari Kontrak dan Sandwich
 
-Catatan dari Sesi 14 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Kontrak `SwapHelper` melakukan swap lewat
+Kontrak `SwapHelper` melakukan swap lewat
 router Uniswap v2; serangan sandwich disimulasikan di fork Ethereum (blok 26.046.409, `eth.drpc.org`)
-dengan `forge test`. Lanjutan dari [EVM 13 - AMM x·y=k](EVM%2013%20-%20AMM%20x%C2%B7y%3Dk.md).
+dengan `forge test`.
 
 Project: `~/Documents/riset/evm/swap` — `src/SwapHelper.sol`, `test/Sandwich.t.sol`.
 

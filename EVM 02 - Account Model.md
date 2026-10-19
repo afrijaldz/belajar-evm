@@ -6,7 +6,7 @@ updated: 2026-10-03
 
 # Account Model EVM
 
-Catatan dari Sesi 2 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Semua angka di sini hasil observasi langsung
+Semua angka di sini hasil observasi langsung
 di `anvil` lokal (Foundry 1.7.1, chain ID 31337) dan BSC mainnet, bukan kutipan dokumentasi.
 Pembanding: Account Model Solana.
 

@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # AMM x·y=k
 
-Catatan dari Sesi 13 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24 — sesi pertama Fase 3. Pool Uniswap v2 dibaca dan
+Pool Uniswap v2 dibaca dan
 di-swap di fork Ethereum (blok ~26.046.376, `eth.drpc.org`), PancakeSwap v2 dibaca langsung di BSC.
-Lanjutan dari [EVM 12 - Mini Project Vault](EVM%2012%20-%20Mini%20Project%20Vault.md). Script: `~/Documents/riset/evm/amm/` — `swaps.py` dan `feeto.py` butuh `anvil --fork-url` Ethereum di
+ Script: `~/Documents/riset/evm/amm/` — `swaps.py` dan `feeto.py` butuh `anvil --fork-url` Ethereum di
 port 8545; `pancake.py` langsung ke nodereal BSC.
 
 ## Harga = rasio reserve
@@ -30,6 +30,10 @@ Fee 0,3% ditahan, lalu `x·y` dijaga:
 ```
 amountOut = (Δx × 997 × y) / (x × 1000 + Δx × 997)
 ```
+
+### Penjelasan detail
+
+1. [EVM 13.01 - Alur Swap dari Wallet sampai Pool](EVM%2013%20-%20Detail/EVM%2013.01%20-%20Alur%20Swap%20dari%20Wallet%20sampai%20Pool.md) — alur lengkap satu swap: quote off-chain, `approve`, router (`deadline`, `amountOutMin`, `transferFrom` ke pair), `pair.swap` kirim-dulu-cek-belakangan, cek invariant + fee, multi-hop, variasi v3/v4/aggregator/intent/Curve
 
 ## Rumus vs router vs swap nyata
 

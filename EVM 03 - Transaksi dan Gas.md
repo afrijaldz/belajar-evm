@@ -6,9 +6,9 @@ updated: 2026-09-24
 
 # Transaksi dan Gas EVM
 
-Catatan dari Sesi 3 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Semua angka hasil observasi langsung di
+Semua angka hasil observasi langsung di
 `anvil` lokal (Foundry 1.7.1, hardfork `Bpo1`, block gas limit sengaja dikecilkan ke 100.000)
-dan di Ethereum/BSC mainnet. Lanjutan dari [EVM 02 - Account Model](EVM%2002%20-%20Account%20Model.md).
+dan di Ethereum/BSC mainnet.
 
 Project praktik: `~/Documents/riset/evm/account-model` (kontrak `Tally` dengan event + revert).
 

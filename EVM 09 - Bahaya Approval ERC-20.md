@@ -6,7 +6,7 @@ updated: 2026-09-24
 
 # Bahaya Approval ERC-20
 
-Catatan dari Sesi 9 [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), 2026-09-24. Empat skenario serangan dijalankan sebagai test
+Empat skenario serangan dijalankan sebagai test
 Foundry (7 test) terhadap token sendiri, plus perilaku USDT di fork Ethereum mainnet. Lanjutan dari
 [EVM 08 - ERC-20 dari Nol](EVM%2008%20-%20ERC-20%20dari%20Nol.md).
 
@@ -15,8 +15,8 @@ Project: `~/Documents/riset/evm/solidity-basics` — `src/PermitToken.sol` (MyTo
 
 ## Dasar: approve menyerahkan kendali
 
-`approve(spender, n)` = "`spender` boleh memindahkan sampai `n` token saya, kapan saja, ke mana
-saja, tanpa tanya saya lagi". `transferFrom` tidak butuh tanda tangan pemilik — cukup allowance.
+`approve(spender, n)` = "`spender` boleh memindahkan sampai `n` token pemilik, kapan saja, ke mana
+saja, tanpa tanya pemilik lagi". `transferFrom` tidak butuh tanda tangan pemilik — cukup allowance.
 
 ## Skenario 1: race condition saat menurunkan allowance
 
