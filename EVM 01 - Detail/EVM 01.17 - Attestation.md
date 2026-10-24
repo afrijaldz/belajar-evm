@@ -1,14 +1,14 @@
 ---
 title: EVM 01.17 - Attestation
 tags: [learning, evm, ethereum]
-updated: 2026-10-10
+updated: 2026-10-24
 ---
 
 # Attestation
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md) · [EVM 01.18 - Finality](EVM%2001.18%20-%20Finality.md) →
 
-Pertanyaan: attestation itu gimana cara kerjanya?
+Hasil percobaan untuk materi ini ada di [EVM 01.17 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.17%20-%20Hasil%20Praktik.md).
 
 **Attestation adalah suara yang ditandatangani validator.** Isinya kira-kira: "menurut saya,
 ujung rantai sekarang adalah blok X, dan saya mendukung checkpoint Y menuju Z." Setiap
@@ -38,8 +38,10 @@ Suara ini dipakai untuk dua hal:
 
 ## Komite: siapa memberi suara kapan
 
-Semua validator aktif diacak lalu dibagi rata ke 32 slot × 64 komite setiap epoch. Jadi
-setiap slot, sekitar 1/32 validator memberi suara.
+Semua validator aktif diacak lalu dibagi rata ke 32 slot × 64 komite = **2.048 komite** setiap
+epoch. Jadi setiap slot, sekitar 1/32 validator memberi suara. Ukuran satu komite = jumlah
+validator aktif ÷ 2.048; dengan sekitar 850 ribu validator aktif, satu komite berisi ±416
+validator.
 
 ```text
 Epoch (32 slot, 6,4 menit)
@@ -51,7 +53,7 @@ Epoch (32 slot, 6,4 menit)
 ```
 
 Validator memberi suara sekitar 4 detik setelah slot dimulai, atau lebih cepat kalau blok slot
-itu sudah diterima (pengetahuan umum). Validator yang belum melihat blok terbaru akan memilih
+itu sudah diterima. Validator yang belum melihat blok terbaru akan memilih
 blok terakhir yang ia lihat. Ini tidak dihukum, cuma reward head-nya hilang.
 
 ## Agregasi: puluhan ribu suara jadi satu
@@ -59,7 +61,7 @@ blok terakhir yang ia lihat. Ini tidak dihukum, cuma reward head-nya hilang.
 Tanda tangan BLS bisa **digabung**. Ribuan tanda tangan untuk isi yang sama digabung jadi satu
 tanda tangan 96 byte, ditambah `aggregation_bits` (satu bit per anggota komite: 1 = ikut
 memberi suara). Beberapa validator per komite ditunjuk sebagai *aggregator* untuk
-menggabungkan (pengetahuan umum).
+menggabungkan.
 
 Sejak Pectra (Mei 2025), satu attestation gabungan bisa mencakup **semua 64 komite** sekaligus
 (`committee_bits`). Hasilnya, satu blok cukup berisi beberapa attestation untuk menampung
@@ -73,21 +75,37 @@ puluhan ribu suara.
 3. Suara disebar ke jaringan dan digabung aggregator.
 4. Proposer slot berikutnya memasukkan attestation gabungan ke bloknya.
 5. Reward diberikan kalau `source`, `target`, dan `head` benar dan suara masuk cepat. Kalau
-   salah atau terlambat, kena penalti kecil (pengetahuan umum).
+   salah atau terlambat, kena penalti kecil.
 
-## Bukti (2026-10-10)
+## Yang terlihat di blok
 
-Data dari Beacon API publicnode.
+- **Suara slot N masuk di blok slot N+1.** Proposer berikutnya yang memasukkannya.
+- **Satu attestation gabungan bisa berisi puluhan ribu suara** dari 64 komite, dengan tingkat
+  partisipasi biasanya di atas 99%.
+- **Tidak semua suara memilih head yang sama.** Di blok yang sama sering ada attestation kecil
+  yang memilih blok lebih lama. Validator di dalamnya belum melihat blok terbaru saat memberi
+  suara.
+- **`target` selalu blok pertama epoch berjalan, `source` checkpoint epoch sebelumnya.**
+- **Finality tertinggal sekitar 2 epoch.** Saat epoch N berjalan, checkpoint N-1 biasanya
+  justified dan N-2 finalized, jadi blok jadi final sekitar ±12,8 menit di belakang (lihat
+  [EVM 01.18 - Finality](EVM%2001.18%20-%20Finality.md)).
 
-| Cek | Hasil |
-| --- | --- |
-| Komite epoch 481.227 (`/eth/v1/beacon/states/head/committees`) | **2.048 komite** = 32 slot × 64; ukuran 416–417; total **851.992** validator → setiap validator aktif muncul tepat sekali per epoch |
-| Blok head slot 15.399.286: attestation gabungan pertama | untuk slot 15.399.285, mencakup **64 komite**, 26.632 bit, **26.570 suara (99,77%)**; head = `0xb9d6…` = blok slot 15.399.285; source epoch 481.226 → target 481.227; signature 96 byte |
-| Attestation kedua di blok yang sama | 1 komite, cuma **2 suara**, head = `0x3407…` = blok slot 15.399.284 → dua validator ini belum melihat blok terbaru |
-| Validator 2.092.386 | dijadwalkan di slot **15.399.266**, komite 0, posisi 290 |
-| Suaranya di blok 15.399.267 (+1 slot) | bit ke-290 = **1** (ikut); head = `0x5d21…` = blok slot 15.399.266; target = `0xbb40…` = blok pertama epoch 481.227 (slot 15.399.264); source = epoch 481.226 |
-| Attestation lain di blok 15.399.267 untuk slot yang sama | 16 komite memilih head `0x7a4e…` (blok slot 15.399.265) dan 2 komite memilih `0xbb40…` (slot 15.399.264): belum melihat blok slot 15.399.266. Validator 2.092.386 tidak ikut di gabungan ini |
-| Finality saat dicek | epoch berjalan 481.227, justified 481.226, **finalized 481.225** → blok jadi final sekitar 2 epoch (±12,8 menit) di belakang |
+## Coba sendiri
+
+1. Ambil daftar komite satu epoch, lalu hitung jumlah komite dan total validator.
+2. Buka blok terbaru dan lihat attestation di dalamnya: `aggregation_bits`, `committee_bits`,
+   `beacon_block_root`, `source`, `target`.
+3. Cari jadwal satu validator (slot, komite, posisi), lalu cek bit posisinya di attestation
+   pada blok slot berikutnya.
+4. Lihat `finality_checkpoints` untuk membandingkan epoch berjalan dengan justified dan
+   finalized.
+
+```bash
+BEACON=https://ethereum-beacon-api.publicnode.com
+curl -s "$BEACON/eth/v1/beacon/states/head/committees?epoch=<epoch>" | jq '.data | length'
+curl -s $BEACON/eth/v2/beacon/blocks/head | jq '.data.message.body.attestations[0].data'
+curl -s $BEACON/eth/v1/beacon/states/head/finality_checkpoints
+```
 
 ---
 

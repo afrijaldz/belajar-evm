@@ -1,12 +1,14 @@
 ---
 title: EVM 01.05 - Environment
 tags: [learning, evm, environment]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Environment
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.04 - Memory dan Calldata](EVM%2001.04%20-%20Memory%20dan%20Calldata.md) · [EVM 01.06 - Storage](EVM%2001.06%20-%20Storage.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.05 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.05%20-%20Hasil%20Praktik.md).
 
 Informasi tentang **situasi saat kode dijalankan**, yang disediakan EVM
 dan hanya bisa dibaca: siapa yang memanggil, berapa ETH yang dikirim, blok ke berapa, di chain
@@ -41,21 +43,21 @@ wallet 0xf39F…  ──tx──►  kontrak B  ──CALL──►  kontrak A
                                                  ORIGIN = 0xf39F… (wallet)
 ```
 
-Bukti (2026-10-03, anvil): kontrak A menyimpan `CALLER`, `CALLVALUE`, `ORIGIN`, `NUMBER`,
-`CHAINID` ke storage.
+**Jebakan:** kegagalan call ke kontrak lain tidak otomatis menggagalkan transaksi. Opcode
+`CALL` tidak meneruskan kegagalan; ia hanya menaruh 0 di stack, dan pemanggil harus mengecek
+hasilnya sendiri. Solidity melakukannya otomatis untuk pemanggilan fungsi biasa, tidak untuk
+`.call`. Contohnya: kalau estimasi gas `cast send` terlalu kecil untuk call di dalamnya, call ke
+kontrak tujuan gagal `OutOfGas`, tapi transaksinya tetap **sukses**. Pakai `--gas-limit` yang
+cukup kalau transaksi memicu call berantai.
 
-| | Dipanggil langsung dari wallet + 7 wei | Dipanggil lewat kontrak B |
-| --- | --- | --- |
-| `CALLER` | `0xf39F…2266` (wallet) | `0x84ea…7feb` (**B**) |
-| `CALLVALUE` | 7 | 0 |
-| `ORIGIN` | `0xf39F…2266` | `0xf39F…2266` (tetap wallet) |
-| `NUMBER` | 34 | 35 |
-| `CHAINID` | `0x7a69` = 31337 | 31337 |
+## Coba sendiri
 
-Jebakan yang ketemu saat tes: `cast send` ke B tanpa `--gas-limit` memperkirakan gas terlalu
-kecil, call ke A gagal `OutOfGas`, tapi transaksinya tetap **sukses**, karena opcode `CALL`
-tidak meneruskan kegagalan; pemanggil harus mengecek hasilnya sendiri (Solidity melakukannya
-otomatis untuk pemanggilan fungsi biasa, tidak untuk `.call`).
+1. Buat kontrak A di `anvil` yang menyimpan `CALLER`, `CALLVALUE`, `ORIGIN`, `NUMBER`, dan
+   `CHAINID` ke storage.
+2. Panggil A langsung dari wallet sambil mengirim 7 wei, lalu baca storage-nya.
+3. Buat kontrak B yang memanggil A, panggil B dari wallet (dengan `--gas-limit` yang cukup),
+   lalu baca lagi. `CALLER` seharusnya berubah jadi B, `ORIGIN` tetap wallet, dan `CHAINID` di
+   `anvil` = `0x7a69` = 31337.
 
 ---
 

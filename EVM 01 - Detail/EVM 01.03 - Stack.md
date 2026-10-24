@@ -1,12 +1,14 @@
 ---
 title: EVM 01.03 - Stack
 tags: [learning, evm, stack]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Stack
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.02 - Opcode](EVM%2001.02%20-%20Opcode.md) · [EVM 01.04 - Memory dan Calldata](EVM%2001.04%20-%20Memory%20dan%20Calldata.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.03 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.03%20-%20Hasil%20Praktik.md).
 
 Stack adalah tumpukan kotak. Setiap kotak (disebut
 **word**) lebarnya tetap **32 byte = 256 bit**, tidak bisa lebih kecil atau lebih besar.
@@ -36,9 +38,17 @@ Akibatnya:
 - **Storage juga per 32 byte:** satu slot = key 32 byte → value 32 byte. Karena itu variabel
   kecil bisa "dipacking" ke satu slot untuk hemat gas.
 
-Bukti (2026-10-03, anvil): bytecode `PUSH32 0xff…ff (max) · PUSH1 2 · ADD · PUSH1 0 · SSTORE ·
-CALLER · PUSH1 1 · SSTORE` → slot 0 = `0x…01` (max + 2 memutar jadi 1, tanpa revert),
-slot 1 = `0x000000000000000000000000f39fd6e5…92266` (alamat pemanggil dipad ke 32 byte).
+## Coba sendiri
+
+Deploy bytecode berikut sebagai kontrak di `anvil`, panggil, lalu baca slot 0 dan 1 dengan
+`cast storage`:
+
+```text
+PUSH32 0xff…ff (max) · PUSH1 2 · ADD · PUSH1 0 · SSTORE · CALLER · PUSH1 1 · SSTORE
+```
+
+- Slot 0 seharusnya `0x…01`: max + 2 memutar jadi 1, tanpa revert.
+- Slot 1 seharusnya alamat pemanggil yang dipad nol di kiri sampai 32 byte.
 
 ---
 

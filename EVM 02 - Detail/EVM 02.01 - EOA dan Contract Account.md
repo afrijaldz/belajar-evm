@@ -1,12 +1,14 @@
 ---
 title: EVM 02.01 - EOA dan Contract Account
 tags: [learning, evm, account]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # EOA dan Contract Account
 
 Bagian dari [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) · [EVM 02.02 - Nonce](EVM%2002.02%20-%20Nonce.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 02.01 - Hasil Praktik](../Hasil%20Praktik/EVM%2002.01%20-%20Hasil%20Praktik.md).
 
 Di EVM hanya ada **dua jenis akun**. Bedanya ada pada **siapa yang mengendalikan** akun itu.
 
@@ -31,8 +33,8 @@ dan aturan itu tidak bisa diubah siapa pun.
          ▼                                                  
  ┌─────────────────────┐    transaksi     ┌─────────────────────┐   CALL   ┌─────────────────────┐
  │ EOA                 │ ───────────────► │ Contract A          │ ───────► │ Contract B          │
- │ balance: 5,7 ETH    │                  │ balance             │          │ balance             │
- │ nonce: 5966         │                  │ nonce: 1            │          │ nonce: 1            │
+ │ balance: 2 ETH      │                  │ balance             │          │ balance             │
+ │ nonce: 42           │                  │ nonce: 1            │          │ nonce: 1            │
  │ code: (kosong)      │                  │ code: bytecode      │          │ code: bytecode      │
  │ storage: (kosong)   │                  │ storage: data       │          │ storage: data       │
  └─────────────────────┘                  └─────────────────────┘          └─────────────────────┘
@@ -59,7 +61,8 @@ alamat yang belum pernah dipakai); ada bytecode berarti kontrak. Tidak ada field
 Akibat penting:
 
 - **Setiap transaksi pasti dimulai EOA.** Kontrak yang "jalan otomatis" (misalnya burn mingguan
-  CAKE) sebenarnya dipicu oleh bot EOA (lihat [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md), bagian BSC). Di dalam
+  CAKE) sebenarnya dipicu oleh bot EOA (lihat
+  [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md#kontrak-tidak-bisa-memulai-transaksi)). Di dalam
   kontrak, `tx.origin` selalu EOA, `msg.sender` bisa EOA atau kontrak (lihat
   [EVM 01.05 - Environment](../EVM%2001%20-%20Detail/EVM%2001.05%20-%20Environment.md)).
 - **Kontrak tidak bisa menyimpan rahasia atau menandatangani apa pun**, karena tidak punya kunci
@@ -71,27 +74,36 @@ Akibat penting:
 
 Sejak upgrade Pectra (2025), EOA boleh **menitipkan code** berupa penunjuk 23 byte
 `0xef0100 + alamat kontrak`. EOA itu tetap punya private key dan tetap bisa memulai transaksi,
-tapi kalau dipanggil, ia menjalankan logika kontrak tujuan. Detail dan percobaannya di
-[EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) (bagian EIP-7702).
+tapi kalau dipanggil, ia menjalankan logika kontrak tujuan. Detailnya di
+[EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) (bagian "Pengecualian modern: EIP-7702").
 
-## Bukti (2026-10-03)
+Delegasi ini terlihat lewat `cast code`: EOA yang mendelegasikan code-nya punya code tepat
+**23 byte** yang diawali `0xef0100`, tapi nonce-nya tetap menghitung transaksi yang ia kirim.
+Wallet EOA yang sudah lama dipakai bisa saja punya code seperti ini.
 
-Akun nyata di Ethereum mainnet:
+## Cara lahir masing-masing
 
-| Akun | code | nonce | Jenis |
-| --- | ---: | ---: | --- |
-| `0xd8dA…6045` (wallet publik Vitalik Buterin) | **23 byte** `0xef01005a7f…6f6d` | 5.966 | EOA dengan delegasi EIP-7702 ke kontrak `0x5a7f…6f6d` (11.162 byte) |
-| `0xA0b8…eB48` (USDC) | 2.186 byte | 1 | contract (proxy) |
-| `0xC02a…6Cc2` (WETH) | 3.124 byte | 1 | contract |
-| `0x…dEaD` | 0 | 0 | EOA tanpa pemilik yang diketahui |
+- **EOA** lahir **offline**. `cast wallet new` membuat key + alamat tanpa transaksi apa pun.
+  Alamat baru itu langsung "ada" di chain dengan nonce 0, code `0x`, saldo 0.
+- **Contract** lahir lewat transaksi deploy. Alamatnya bisa dihitung lebih dulu dengan
+  `cast compute-address <deployer> --nonce <n>`, dan deploy berikutnya dari akun itu mendarat
+  **persis** di alamat tersebut, dengan nonce 1. Alamat kontrak murni hasil rumus, jadi tidak
+  ada private key yang menghasilkannya.
 
-Membuat masing-masing di anvil:
+## Coba sendiri
 
-- **EOA**: `cast wallet new` membuat key + alamat **secara offline**, tanpa transaksi. Alamat
-  baru `0x8830…cB91` langsung "ada" di chain dengan nonce 0, code `0x`, saldo 0.
-- **Contract**: `cast compute-address 0xf39F…2266 --nonce 58` memprediksi `0xc351…1181`;
-  deploy berikutnya dari akun itu mendarat **persis** di alamat tersebut, dengan nonce 1 dan
-  code `0x00`. Alamat kontrak murni hasil rumus, jadi tidak ada private key yang menghasilkannya.
+1. Cek `code` dan `nonce` beberapa akun nyata di Ethereum mainnet: wallet pribadi, token
+   (USDC `0xA0b8…eB48`, WETH `0xC02a…6Cc2`), dan `0x…dEaD`.
+2. Di `anvil`, buat EOA baru dengan `cast wallet new`, lalu cek nonce, code, dan saldonya.
+3. Prediksi alamat kontrak dari akun #0, deploy kontrak, lalu cek alamat, nonce, dan code-nya.
+
+```bash
+cast code <alamat> --rpc-url <rpc>        # 0x = EOA; ada bytecode = kontrak
+cast codesize <alamat> --rpc-url <rpc>
+cast nonce <alamat> --rpc-url <rpc>
+cast wallet new                           # key + alamat baru, offline
+cast compute-address <deployer> --nonce $(cast nonce <deployer>)
+```
 
 ---
 

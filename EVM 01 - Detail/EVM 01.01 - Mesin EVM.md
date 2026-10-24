@@ -1,12 +1,14 @@
 ---
 title: EVM 01.01 - Mesin EVM
 tags: [learning, evm, visual]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Mesin EVM
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · [EVM 01.02 - Opcode](EVM%2001.02%20-%20Opcode.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.01 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.01%20-%20Hasil%20Praktik.md).
 
 ## Posisi EVM di dalam node
 
@@ -82,11 +84,20 @@ simpan di storage slot 0". Kolom stack ditulis dengan elemen paling atas di kana
 Total eksekusi 22.112 gas. SSTORE paling mahal karena menulis ke storage permanen yang
 disimpan semua node (20.000 untuk 0 → bukan nol + 2.100 akses slot "dingin").
 
-Bukti (2026-10-03, anvil lokal): program di atas di-deploy sebagai kontrak lalu dipanggil.
-`cast run <tx> -vvvvv` → `storage changes: @ 0: 0 → 5`, gas eksekusi `[22112]`, total
-`gasUsed` 43.112 = 21.000 (biaya dasar transaksi) + 22.112. Kolom stack di tabel diturunkan dari definisi
-opcode; totalnya cocok. Trace per langkah bisa dilihat dengan `cast run <tx> -t` (lihat
-[EVM 01.07 - Program Counter](EVM%2001.07%20-%20Program%20Counter.md)).
+Kalau program ini dijalankan sebagai kontrak lewat sebuah transaksi, `gasUsed` transaksinya
+43.112 = 21.000 (biaya dasar transaksi) + 22.112 (eksekusi).
+
+## Coba sendiri
+
+1. Deploy program di atas sebagai kontrak di `anvil`, lalu panggil kontraknya.
+2. Lihat perubahan storage dan gas eksekusi dengan `cast run <tx> -vvvvv`. Slot 0 harus berubah
+   dari 0 ke 5.
+3. Lihat jejak per langkah dengan `cast run <tx> -t` (lihat [EVM 01.07 - Program Counter](EVM%2001.07%20-%20Program%20Counter.md)).
+
+```bash
+cast run <tx> -vvvvv    # storage changes + gas eksekusi
+cast run <tx> -t        # trace per opcode
+```
 
 ---
 

@@ -1,78 +1,75 @@
 ---
 title: EVM 23 - Multi-Chain
 tags: [learning, evm, multichain, create2, bridge, l2]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # Multi-Chain
 
-Empat mainnet dibaca langsung (Ethereum, BSC, Base,
-Arbitrum), dua di-fork (Base, BSC) untuk deploy; wallet testnet Sesi 21 masih 0, jadi tidak ada deploy
-sungguhan.
+Sesi 23 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md). Di sesi ini kamu membandingkan beberapa chain EVM berdampingan (Ethereum,
+BSC, Base, Arbitrum), men-deploy kontrak yang sama ke dua fork dengan CREATE dan CREATE2, menguji replay antar
+chain, dan memeriksa bridge UNI ke L2. Lanjutan dari [EVM 22 - Monitoring](EVM%2022%20-%20Monitoring.md).
 
-Script: `~/Documents/riset/evm/multichain/` — `chains.py`, `bridge.py` (langsung ke mainnet), `multichain.py`
-(butuh fork Base di port 8550 dan BSC di 8551, jalankan dari folder `vault-project`).
+Hasil percobaan untuk materi ini ada di [EVM 23 - Hasil Praktik](Hasil%20Praktik/EVM%2023%20-%20Hasil%20Praktik.md).
 
-## Empat chain berdampingan
+## Yang sama dan yang beda antar chain
 
-| Chain | ID | Block time | Multicall3 `0xcA11…CA11` | CREATE2 deployer `0x4e59…956C` | `eth_blockNumber` | `block.number` dilihat kontrak |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Ethereum | 1 | 12,18 s | 3.808 byte | 69 byte | 26.046.755 | 26.046.755 |
-| BSC | 56 | 0,45 s | 3.808 byte | 69 byte | 123.741.944 | 123.741.956 |
-| Base | 8453 | 2,00 s | 3.808 byte | 69 byte | 51.728.400 | 51.728.401 |
-| Arbitrum | 42161 | 0,27 s | 3.808 byte | 69 byte | **508.415.943** | **26.046.756** |
+**Sama:** kontrak infrastruktur tertentu ada **di alamat yang sama** di banyak chain EVM — fondasi deploy
+multi-chain:
 
-- Multicall3 dan deployer CREATE2 Arachnid ada **di alamat sama** di keempat chain — fondasi deploy
-  multi-chain.
-- **Di Arbitrum, `block.number` di dalam kontrak = nomor blok Ethereum (L1)**, bukan L2. `block.number`
-  dibaca lewat `Multicall3.getBlockNumber()`.
+- Multicall3 di `0xcA11bde05977b3631167028862bE2a173976CA11`
+- Deployer CREATE2 Arachnid di `0x4e59b44847b379578588920cA78FbF26c0B4956C`
+
+**Beda:** chain ID, block time, dan arti `block.number`.
+
+- Block time sangat bervariasi: sekitar 12 s di Ethereum, 2 s di Base, di bawah 1 s di BSC dan Arbitrum.
+- **Di Arbitrum, `block.number` di dalam kontrak = nomor blok Ethereum (L1)**, bukan nomor blok L2 yang
+  dikembalikan `eth_blockNumber`. Cara melihatnya: bandingkan `eth_blockNumber` dengan
+  `Multicall3.getBlockNumber()`.
 
 ### Bahaya `block.number` untuk waktu
 
-Kunci "100.000 blok": BSC ≈ **12,5 jam**, Ethereum dan Arbitrum ≈ **14 hari** — kode identik. Kontrak
-multi-chain memakai `block.timestamp` untuk mengukur waktu. (Riset CAKE juga pernah salah hitung block time
-BSC — Lapisan Kedua BNB dan CAKE.)
+Kunci "100.000 blok" dengan kode yang identik: di BSC habis dalam ≈ **12,5 jam**, di Ethereum dan Arbitrum
+≈ **14 hari** (Arbitrum ikut blok L1). Kontrak multi-chain memakai `block.timestamp` untuk mengukur waktu.
 
 ## CREATE vs CREATE2
 
-`Vault` di-deploy dari wallet baru yang sama di fork Base dan fork BSC. Di BSC ada satu transaksi ekstra
-lebih dulu, jadi nonce berbeda.
-
-| | Base (8453) | BSC (56) |
-| --- | --- | --- |
-| **CREATE** (nonce 0 vs 1) | `0x750f69147b30B7A8520e36B8d4098447Fa88CA05` | `0x2e197f4a353feF322B5F3e785C0872Bf914ce0aF` — **beda** |
-| **CREATE2** lewat Arachnid, salt `0x…17` | `0x94A2e88Da164797087B2d39737bb187B24725dAB` | `0x94A2e88Da164797087B2d39737bb187B24725dAB` — **sama**, 2.084 byte |
+- **CREATE**: alamat = fungsi dari deployer + nonce ([EVM 02 - Account Model](EVM%2002%20-%20Account%20Model.md)). Wallet yang sama bisa punya
+  nonce berbeda di tiap chain, jadi kontrak yang sama mendarat di **alamat berbeda**.
+- **CREATE2**: alamat = fungsi dari deployer, salt, dan bytecode. Lewat deployer Arachnid (alamatnya sama di
+  semua chain) dengan salt dan bytecode yang sama, kontrak mendarat di **alamat yang sama** di semua chain.
 
 ```
 alamat CREATE2 = keccak256(0xff ‖ deployer ‖ salt ‖ keccak256(initCode))[12:]
 cast create2 --deployer 0x4e59b44847b379578588920cA78FbF26c0B4956C --salt <salt> --init-code <bytecode>
 ```
 
-Alamat CREATE2 dihitung **sebelum** menyentuh chain apa pun. Syarat: bytecode identik byte per byte —
+Alamat CREATE2 bisa dihitung **sebelum** menyentuh chain apa pun. Syarat: bytecode identik byte per byte —
 termasuk metadata; `optimizer_runs` berbeda → alamat berbeda ([EVM 21 - Deploy ke Testnet dan Verifikasi](EVM%2021%20-%20Deploy%20ke%20Testnet%20dan%20Verifikasi.md)).
 Deployer Arachnid menerima calldata = `salt ‖ initCode`.
 
 ## Replay antar chain
 
-Transaksi ditandatangani untuk chain 8453 → **diterima** di fork Base (status `0x1`), **ditolak** di fork BSC:
-`invalid chain id for signer`. Chain ID ikut ditandatangani (EIP-155, [EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md)).
+Chain ID ikut ditandatangani (EIP-155, [EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md)). Transaksi yang ditandatangani untuk
+satu chain diterima di chain itu, tapi ditolak di chain lain dengan `invalid chain id for signer`.
 
 ## Bridge: UNI di L2 (lock-and-mint)
 
-UNI asli dikunci di kontrak bridge L1; versi L2 dicetak. Invariant bridge sehat:
+UNI asli dikunci di kontrak bridge L1 (escrow); versi L2 dicetak. Invariant bridge sehat:
 **UNI terkunci di L1 ≥ supply UNI di L2**.
 
-| L2 | UNI L2 | Fungsi asal-token | Supply L2 | Terkunci di L1 (escrow) | Kelebihan |
-| --- | --- | --- | ---: | ---: | ---: |
-| Base | `0xc3De830EA07524a0761646a6a4e4be0e114a3C83` | `remoteToken()` | 157.825 | 236.720 (`0x3154…2c35`) | **+78.895** |
-| Optimism | `0x6fd9d7AD17242c41f7131d257212c54A0e816691` | `l1Token()` | 73.573 | 82.497 (`0x99c9…4be1`) | +8.924 |
-| Arbitrum | `0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0` | `l1Address()` | 998.081 | 1.038.118 (`0xa3a7…0eec`) | +40.037 |
+Token L2 menyimpan alamat token asalnya di L1, dan nama fungsinya beda per bridge:
 
-Asal token = UNI L1 di ketiganya (dibaca on-chain). Kelebihan escrow kemungkinan besar **burn yang sedang
-dalam perjalanan**: burn L2 langsung mengurangi supply L2, escrow L1 baru dilepas ke `0xdead` setelah
-withdrawal final (~7 hari). Menyambung [EVM 22 - Monitoring](EVM%2022%20-%20Monitoring.md): ~128.000 UNI kemungkinan akan tiba di
-`0xdead` beberapa hari ke depan. Sebagian kelebihan bisa juga UNI yang terkirim langsung ke bridge — tidak
-bisa dipisahkan dari data ini.
+| L2 | Bridge L1 | Fungsi asal-token |
+| --- | --- | --- |
+| Base | `L1StandardBridge` | `remoteToken()` |
+| Optimism | `L1StandardBridge` | `l1Token()` |
+| Arbitrum | `L1ERC20Gateway` | `l1Address()` |
+
+Escrow L1 bisa **lebih besar** dari supply L2. Penyebab yang paling mungkin adalah **burn yang sedang dalam
+perjalanan**: burn di L2 langsung mengurangi supply L2, tapi escrow L1 baru dilepas ke `0xdead` setelah
+withdrawal final (~7 hari untuk rollup OP, lihat [EVM 22 - Monitoring](EVM%2022%20-%20Monitoring.md)). Sebagian kelebihan bisa juga UNI
+yang terkirim langsung ke bridge — keduanya tidak bisa dipisahkan dari data saldo saja.
 
 ## Checklist kontrak multi-chain
 
@@ -84,3 +81,22 @@ bisa dipisahkan dari data ini.
 | Jangan asumsikan token sama = alamat sama | UNI punya alamat berbeda di tiap L2 |
 | Cek `evm_version` yang didukung chain target | opcode baru belum tentu ada di semua chain |
 | Pantau invariant bridge (escrow ≥ supply L2) | bridge adalah titik kepercayaan terbesar |
+
+## Coba sendiri
+
+1. Untuk tiap chain, baca chain ID, block time, code size Multicall3 dan deployer Arachnid, lalu bandingkan
+   `eth_blockNumber` dengan `Multicall3.getBlockNumber()`.
+2. Jalankan fork Base (port 8550) dan fork BSC (port 8551). Deploy `Vault` dari wallet baru yang sama dengan
+   CREATE; di salah satu chain kirim satu transaksi lain dulu supaya nonce-nya beda. Bandingkan alamatnya.
+3. Deploy lagi lewat deployer Arachnid dengan salt yang sama; bandingkan alamat dan hasil `cast create2`.
+4. Tanda tangani transaksi untuk chain 8453, lalu kirim ke fork Base dan fork BSC.
+5. Untuk tiap L2, baca supply UNI L2, alamat asal-tokennya, dan saldo UNI di escrow L1. Cek invariant bridge.
+
+```bash
+cast chain-id --rpc-url <rpc>
+cast code 0xcA11bde05977b3631167028862bE2a173976CA11 --rpc-url <rpc> | wc -c
+cast call 0xcA11bde05977b3631167028862bE2a173976CA11 'getBlockNumber()(uint256)' --rpc-url <rpc>
+cast block-number --rpc-url <rpc>
+anvil --fork-url <rpc-base> --port 8550
+anvil --fork-url <rpc-bsc> --port 8551
+```

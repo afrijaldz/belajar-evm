@@ -1,54 +1,52 @@
 ---
 title: EVM 06 - Mekanisme Burn UNI di Fork
 tags: [learning, evm, ethereum, uni, fork, tokenomics]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # Mekanisme Burn UNI di Fork
 
-Rekonstruksi buyback-burn UNI dari transaksi
-nyata, lalu dijalankan sendiri di `anvil` fork Ethereum mainnet (blok ~26.046.123, RPC
-`eth.drpc.org`). Lanjutan dari [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md); melengkapi
+Sesi 6 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), lanjutan dari [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md). Di sesi ini kamu
+membedah mekanisme buyback-burn UNI: kontrak apa yang terlibat, siapa yang sebenarnya membeli
+dan membakar UNI, lalu mencobanya sendiri di `anvil` fork Ethereum mainnet. Melengkapi
 UNI Diperiksa dengan Saringan Lima Chain.
 
-## Transaksi burn asli: dikerjakan bot, bukan protokol
+Hasil percobaan untuk materi ini ada di [EVM 06 - Hasil Praktik](Hasil%20Praktik/EVM%2006%20-%20Hasil%20Praktik.md).
 
-Burn terbaru `0x0bdd8b780b66ae68c52eebb7f4660eaddb63b85265549dae86c41d692c422aaa`
-(2026-09-23 20:31 UTC):
+## Burn dikerjakan bot, bukan protokol
 
-| | |
-| --- | --- |
-| Pengirim | EOA `0xFeeFee6e90b7Bc64f6ADBa1dDb6d5A13c2D169d3` |
-| Tujuan | kontrak bot `0x9b715efB4EbDB14862d079A841bA4983FFd69236` (19.767 byte) |
-| Calldata | 8.228 byte, selector `0x7e874012` (tidak ada di database publik) |
-| **Log / gas** | **256 log, 4.236.883 gas** |
+Transaksi burn UNI dikirim oleh EOA bot ke **kontrak bot** miliknya sendiri, bukan oleh
+protokol. Transaksinya besar: ratusan log dan jutaan gas, dengan calldata ribuan byte dan
+selector yang tidak ada di database publik.
 
 Alur di dalam satu transaksi atomik:
 
-1. Flash loan WETH dari Morpho Blue `0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb`.
+1. Flash loan WETH (misalnya dari Morpho Blue).
 2. Tarik fee protokol dari puluhan pool Uniswap v2 (`Mint` LP fee) dan v3 (`CollectProtocol`)
    ke **TokenJar**.
-3. Beli tepat **4.000 UNI** dari beberapa pool.
-4. Panggil **Firepit** → 4.000 UNI ke `0xdead`, TokenJar menyerahkan semua isinya ke bot.
+3. Beli tepat sejumlah UNI sebesar `threshold` dari beberapa pool.
+4. Panggil **Firepit** → UNI sebesar `threshold` ke `0xdead`, TokenJar menyerahkan isinya ke bot.
 5. Jual semua token hasil jar ke WETH, lunasi flash loan.
 
 ## Kontrak
 
-| Kontrak | Alamat | Peran |
-| --- | --- | --- |
-| **Firepit** | `0x0d5cd355e2abeb8fb1552f56c965b867346d6721` | penjaga gerbang: tarik UNI → `0xdead`, perintahkan jar melepas |
-| **TokenJar** | `0xf38521f130fccf29db1961597bc5d2b60f995f85` | wadah fee; `releaser` = Firepit |
-
-Konfigurasi Firepit (2026-09-24):
-
-| Parameter | Nilai |
+| Kontrak | Peran |
 | --- | --- |
-| `RESOURCE` | UNI |
-| `RESOURCE_RECIPIENT` | `0x…dEaD` |
-| `threshold` | **4.000 UNI** (~$36.960 di $9,24) |
-| `nonce` | 1.361 (transaksi di atas = 1.359) |
-| `MAX_RELEASE_LENGTH` | 20 aset |
-| `owner` | Timelock governance UNI `0x1a9C…35BC` |
+| **Firepit** | penjaga gerbang: tarik UNI → `0xdead`, perintahkan jar melepas |
+| **TokenJar** | wadah fee; `releaser` = Firepit |
+
+Parameter Firepit:
+
+| Parameter | Arti |
+| --- | --- |
+| `RESOURCE` | token yang harus dibayar (UNI) |
+| `RESOURCE_RECIPIENT` | penerima pembayaran (`0x…dEaD`) |
+| `threshold` | jumlah UNI per pemanggilan — "harga tiket" |
+| `nonce` | naik 1 setiap `release` berhasil |
+| `MAX_RELEASE_LENGTH` | jumlah aset maksimal per `release` (20) |
+| `owner` | Timelock governance UNI |
+
+Alamat dan nilai parameter di mainnet ada di [EVM 06 - Hasil Praktik](Hasil%20Praktik/EVM%2006%20-%20Hasil%20Praktik.md).
 
 ### Seluruh logika: 4 baris
 
@@ -65,85 +63,88 @@ function release(uint256 _nonce, Currency[] calldata assets, address recipient) 
 - **Nonce wajib sama dengan nonce kontrak** → dua bot berebut, hanya satu menang.
 - **Pemanggil memilih aset** yang diambil, maksimal 20.
 
-## Temuan kunci: TokenJar kosong saat istirahat
+## Kenapa TokenJar biasanya kosong
 
-Di fork, saldo TokenJar: ETH, WETH, USDC, USDT, WBTC, UNI, DAI — **semua 0**.
+Nilai fee tidak menumpuk di jar, tapi **mengendap sebagai fee protokol di masing-masing pool**
+sampai ditarik. Bot menarik fee **dan** membakar UNI dalam transaksi yang sama, jadi di antara
+dua burn, saldo TokenJar praktis nol.
 
-Nilainya tidak menumpuk di jar, tapi **mengendap sebagai fee protokol di masing-masing pool**
-sampai ditarik. Bot menarik fee **dan** membakar UNI dalam transaksi yang sama.
+**Protokol tidak pernah membeli UNI.** Protokol cuma menetapkan harga tiket (`threshold`). Bot
+yang menghitung kapan fee di pool lebih besar dari nilai tiket, menanggung risiko, dan bersaing.
+Persaingan itu yang menjaga nilai burn ≈ nilai fee.
 
-**Protokol tidak pernah membeli UNI.** Protokol cuma menetapkan harga tiket (4.000 UNI). Bot yang
-menghitung kapan fee di pool > 4.000 UNI, menanggung risiko, dan bersaing. Persaingan itu yang
-menjaga nilai burn ≈ nilai fee — penjelasan kenapa burn on-chain cocok ±3–6% dengan holder
-revenue DefiLlama di riset UNI.
+Akibatnya, memanggil `release` sendiri saat jar kosong = membakar UNI sebesar `threshold` tanpa
+mendapat apa-apa. Bot butuh jutaan gas karena menarik fee dari puluhan pool dan swap dalam
+transaksi yang sama; `release` sendiri cukup puluhan ribu gas.
 
-## Percobaan di fork
+## Firepit di L2
 
-### 1. Nonce salah
+Selain Firepit di Ethereum mainnet, ada **Firepit di L2** dengan `threshold` lebih kecil (2.000
+UNI). Setelah `release`, Firepit L2 mem-bridge UNI ke `0xdead` di L1 lewat `_afterRelease`.
+Jadi tidak semua transfer UNI ke `0xdead` di L1 datang dari Firepit mainnet; sebagian datang dari
+bridge (L1StandardBridge Base/Optimism, L1ERC20Gateway Arbitrum, dan gateway/NTT lain). Lihat
+[EVM 22 - Monitoring](EVM%2022%20-%20Monitoring.md).
 
-`release(1360, …)` → `custom error 0x756688fe` = `cast sig 'InvalidNonce()'`. **Custom error di-encode
-seperti fungsi** (4 byte keccak nama), lebih hemat dari `Error(string)`.
+## Custom error di-encode seperti fungsi
 
-### 2. Invariant rusak karena menulis storage
+Memanggil `release` dengan nonce salah menghasilkan revert `custom error 0x756688fe`. Nilai itu
+sama dengan `cast sig 'InvalidNonce()'`. **Custom error di-encode seperti fungsi** (4 byte
+keccak nama), lebih hemat dari `Error(string)`.
 
-Slot mapping `balances` UNI = **4** (dicocokkan dengan saldo `0xdead`). Layout lain:
-slot 0 `totalSupply`, slot 1 `minter`, slot 2 `mintingAllowedAfter`.
+## Jebakan: token governance punya buku besar kedua
 
-Akun `anvil` #0 `0xf39F…2266` diberi 4.000 UNI lewat `anvil_setStorageAt` → `balanceOf` bilang
-4.000, tapi transfer revert **`Uni::_moveVotes: vote amount underflows`**. Sebabnya:
+Slot mapping `balances` UNI = **4**. Layout lain: slot 0 `totalSupply`, slot 1 `minter`, slot 2
+`mintingAllowedAfter`.
+
+Memberi saldo UNI lewat `anvil_setStorageAt` membuat `balanceOf` benar, tapi transfer bisa revert
+**`Uni::_moveVotes: vote amount underflows`**. Sebabnya:
 
 - UNI punya buku besar kedua: **checkpoint suara** governance.
-- Akun #0 **sudah self-delegate di mainnet** (private key-nya publik, banyak orang memakainya).
+- Kalau akun itu sudah pernah self-delegate di mainnet, transfer akan mengurangi suaranya.
 - Saldo ditulis tanpa menambah checkpoint → transfer mengurangi suara dari 0 → underflow.
 
-Contoh nyata peringatan [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md): menulis storage bisa terlihat berhasil lalu
-gagal saat dipakai. Solusi: akun baru yang belum pernah delegate.
+Akun #0 `anvil` (`0xf39F…2266`) **sudah self-delegate di mainnet**, karena private key-nya publik
+dan banyak orang memakainya. Jadi akun itu terkena masalah ini.
 
-### 3. Burn sendiri dari akun baru
+Ini contoh nyata peringatan [EVM 05 - Fork dan Foundry](EVM%2005%20-%20Fork%20dan%20Foundry.md): menulis storage bisa terlihat berhasil
+lalu gagal saat dipakai. Solusi: pakai akun baru yang belum pernah delegate.
 
-| | |
-| --- | --- |
-| status | sukses, 64.879 gas, 3 log |
-| `0xdead` | **+4.000 UNI** |
-| Yang diterima | **0 WETH, 0 ETH** (jar kosong) |
-| Firepit nonce | 1.361 → 1.362 |
-| Hasil | rugi total ~$36.960 |
+## Aturan mint UNI
 
-Bot asli butuh 4,24 jt gas karena menarik fee dari puluhan pool dan swap dalam transaksi yang sama.
+Hanya `minter` (Timelock) yang boleh mint, dengan dua batas:
 
-### 4. Aturan mint UNI (impersonate Timelock sebagai `minter`)
-
-`mintCap` = 2%, `minimumTimeBetweenMints` = 31.536.000 detik (365 hari).
+- `mintCap` = 2% dari `totalSupply` per mint.
+- `minimumTimeBetweenMints` = 31.536.000 detik (365 hari).
 
 | Percobaan | Hasil |
 | --- | --- |
-| mint 2% + 1 wei | ❌ `Uni::mint: exceeded mint cap` |
-| **mint tepat 2% (20 jt)** | ✅ `totalSupply` 1,00 M → **1,02 M** |
-| mint lagi 1 UNI | ❌ `minting not allowed yet` — terbuka lagi **2027-09-24** |
-| mint dari akun biasa | ❌ `only the minter can mint` |
+| mint melebihi 2% | ❌ `Uni::mint: exceeded mint cap` |
+| mint tepat 2% | ✅ |
+| mint lagi sebelum 365 hari | ❌ `minting not allowed yet` |
+| mint dari akun selain `minter` | ❌ `only the minter can mint` |
 
-**Detail baru:** batas 2% dihitung dari `totalSupply` = 1 miliar, yang **masih termasuk 112 jt di
-`0xdead`**. Terhadap supply efektif (~887,8 jt), 20 jt = **2,25%**, bukan 2%.
-
-## Angka yang bergerak hari ini
-
-> ⚠️ **Koreksi Sesi 22 ([EVM 22 - Monitoring](EVM%2022%20-%20Monitoring.md)):** +68.000 UNI di bawah ini **bukan** dari Firepit mainnet
-> (nonce cuma naik 1.359 → 1.361). Sejak 2026-09-23 06:00 UTC: 51 transfer, 112.000 UNI ke `0xdead`, hanya
-> 4.000 dari Firepit mainnet. Sisanya **Firepit di L2 (threshold 2.000)** yang mem-bridge UNI ke `0xdead` di L1
-> lewat `_afterRelease` — datang dari L1StandardBridge Base/Optimism, L1ERC20Gateway Arbitrum, dan
-> gateway/NTT lain.
-
-Saldo `0xdead` UNI: 112.091.581 (riset, pagi) → **112.159.581** (fork, sore) = **+68.000 UNI dalam
-beberapa jam**.
+**Detail penting:** batas 2% dihitung dari `totalSupply`, yang **masih termasuk UNI di `0xdead`**.
+Burn ke `0xdead` tidak mengurangi `totalSupply`, jadi terhadap supply efektif, mint 2% sebenarnya
+sedikit lebih dari 2%.
 
 ## Jebakan tooling
 
 - zsh **tidak memecah variabel tanpa kutip** (`set -- $t` gagal). Logika multi-kolom → Python.
 - Output `cast` menyertakan anotasi (`31536000 [3.153e7]`) → `cut -d' ' -f1` sebelum aritmetika.
-- Fork Ethereum di blok terbaru jalan dengan full node (state ~25 menit). publicnode sempat
-  timeout saat `anvil` start; `eth.drpc.org` stabil.
+- Fork Ethereum di blok terbaru bisa jalan dengan full node (state ~25 menit). Pilih RPC yang
+  stabil; pakai `--retries`, `--fork-retry-backoff`, dan `--timeout` di `anvil`.
 
-## Perintah
+## Coba sendiri
+
+Jalankan `anvil` fork Ethereum mainnet, lalu:
+
+1. Baca `threshold()` dan `nonce()` Firepit.
+2. Panggil `release` dengan nonce salah, lalu cocokkan data revert dengan `cast sig 'InvalidNonce()'`.
+3. Beri saldo UNI ke akun #0 `anvil` lewat storage, lalu coba transfer (harus revert karena
+   checkpoint suara).
+4. Ulangi dengan akun baru: beri saldo, `approve` Firepit, lalu `release`. Cek saldo `0xdead` dan
+   apa yang kamu terima dari jar.
+5. Impersonate Timelock sebagai `minter`, lalu coba mint di atas 2%, tepat 2%, dan mint kedua.
 
 ```bash
 anvil --fork-url https://eth.drpc.org --retries 10 --fork-retry-backoff 2000 --timeout 60000

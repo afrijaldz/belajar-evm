@@ -1,12 +1,14 @@
 ---
 title: EVM 01.04 - Memory dan Calldata
 tags: [learning, evm, memory]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Memory dan Calldata
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.03 - Stack](EVM%2001.03%20-%20Stack.md) · [EVM 01.05 - Environment](EVM%2001.05%20-%20Environment.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.04 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.04%20-%20Hasil%20Praktik.md).
 
 Keduanya deretan byte (bukan tumpukan kotak seperti stack),
 dibaca per alamat byte (*offset*). Bedanya ada di asal data dan siapa yang boleh menulis.
@@ -37,27 +39,28 @@ Memory dipakai karena stack hanya muat kotak 32 byte: data yang panjang (string,
 data `return`, data `LOG`, argumen untuk memanggil kontrak lain) harus disusun dulu di memory.
 `RETURN` dan `LOG` membaca dari memory, bukan dari stack.
 
-Bukti (2026-10-03, anvil), kontrak kecil yang membaca calldata lalu menulis memory, dipanggil
-dua kali dengan calldata `transfer(0xdEaD, 1000)`:
+Contoh dengan calldata `transfer(0xdEaD, 1000)`:
 
-| Yang diukur | Hasil call 1 | Hasil call 2 |
-| --- | --- | --- |
-| `CALLDATASIZE` | 68 (= 4 + 32 + 32) | 68 |
-| `CALLDATALOAD(0)` | `0xa9059cbb000…` (selector + 28 byte awal argumen) | sama |
-| `MLOAD(0)` sebelum ditulis | 0 | **0**, walaupun call 1 sudah menulis 42 ke sana |
-| `MSIZE` setelah satu `MSTORE` | 32 | 32 |
+- `CALLDATASIZE` = 68 (= 4 + 32 + 32).
+- `CALLDATALOAD(0)` = `0xa9059cbb000…`: selector + 28 byte awal argumen pertama, karena
+  `CALLDATALOAD` selalu mengambil 32 byte.
+- **Memory tidak dibawa ke call berikutnya.** `MLOAD(0)` di awal call selalu 0, walaupun call
+  sebelumnya sudah menulis ke offset itu.
+- `MSIZE` dihitung per 32 byte: setelah satu `MSTORE` di offset 0, `MSIZE` = 32.
 
-Biaya membesarkan memory, satu `MSTORE` di offset makin jauh (gas eksekusi seluruh call):
+### Biaya membesarkan memory
 
-| Offset | Ukuran memory | Gas |
-| ---: | ---: | ---: |
-| 0 | 32 byte | 15 |
-| 1.024 | ~1 KB | 113 |
-| 32.768 | ~32 KB | 5.139 |
-| 1.048.576 | ~1 MB | 2.195.599 |
+Biaya memory dihitung dari ukuran memory dalam word (32 byte): **3 × word + word² / 512**.
+Karena ada suku kuadrat, biaya naik jauh lebih cepat daripada ukurannya. Satu `MSTORE` di
+offset ~1 MB (32.768 word) sudah memakan sekitar 2,2 juta gas, jadi memory besar cepat sekali
+jadi tidak terjangkau.
 
-Ukuran naik 32.768x, gas naik ~146.000x: rumusnya 3 × word + word² / 512, jadi memory besar
-cepat sekali jadi tidak terjangkau.
+## Coba sendiri
+
+1. Buat kontrak kecil di `anvil` yang membaca `CALLDATASIZE` dan `CALLDATALOAD(0)`, menyimpan
+   `MLOAD(0)`, lalu menulis 42 ke memory offset 0 dan menyimpan `MSIZE`.
+2. Panggil dua kali dengan calldata `transfer(0xdEaD, 1000)` dan bandingkan hasilnya.
+3. Ganti offset `MSTORE` (0, 1.024, 32.768, 1.048.576) dan bandingkan gas eksekusinya.
 
 ---
 

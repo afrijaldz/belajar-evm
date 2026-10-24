@@ -1,12 +1,14 @@
 ---
 title: EVM 01.12 - Native Token
 tags: [learning, evm, native-token]
-updated: 2026-10-10
+updated: 2026-10-24
 ---
 
 # Native Token
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md) · [EVM 01.13 - EVM, Node, dan Validator](EVM%2001.13%20-%20EVM%2C%20Node%2C%20dan%20Validator.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.12 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.12%20-%20Hasil%20Praktik.md).
 
 **Native token** adalah koin yang **dibangun langsung ke dalam protokol chain**, bukan dibuat
 oleh smart contract. ETH di Ethereum, BNB di BSC, POL di Polygon, AVAX di Avalanche C-Chain.
@@ -66,14 +68,34 @@ Native atau bukan itu soal **chain**, bukan soal nama koin:
   ke chain sendiri. Tidak bisa dipakai bayar gas di Ethereum.
 - **"ETH" di BSC** = token BEP-20 (Binance-Peg), bukan native (lihat [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md)).
 
-## Bukti (2026-10-03)
+## Ciri yang bisa dicek
 
-| Cek | Hasil |
-| --- | --- |
-| Transfer 1 ETH ke `0x…bEEF` di anvil | status 1, gas **21.000** (`0x5208`, hanya biaya dasar), **0 log**; saldo 0 → 1 ETH; code penerima `0x` (EOA biasa) |
-| BNB di Ethereum (`0xB8c7…DD52`) | ada code 5.355 byte, `symbol()` = `"BNB"`, `totalSupply()` = 392.908,13 BNB → kontrak ERC-20 |
-| BNB di BSC, `eth_getBalance(0xdEaD)` | 16.498.950,81 BNB, naik dari 16.498.949,12 beberapa jam sebelumnya (burn BNB jalan terus) |
-| WETH mainnet `0xC02a…6Cc2` | saldo ETH native kontrak = `totalSupply()` WETH = **2.027.136,551081447271723759**, sama sampai wei terakhir |
+Perbedaan native token dan ERC-20 bisa dicek langsung lewat RPC:
+
+- **Transfer native tidak menghasilkan log.** Transfer ETH polos ke EOA berhasil dengan gas
+  tepat **21.000** (`0x5208`, hanya biaya dasar) dan **0 log**.
+- **BNB di Ethereum adalah kontrak.** Alamat `0xB8c7…DD52` punya code, dan `symbol()` serta
+  `totalSupply()` bisa dipanggil seperti token ERC-20 lain.
+- **BNB di BSC dibaca lewat `eth_getBalance`.** Saldo BNB di `0x…dEaD` terus naik karena burn
+  BNB berjalan terus.
+- **WETH dijamin 1:1.** Saldo ETH native kontrak WETH `0xC02a…6Cc2` sama dengan `totalSupply()`
+  WETH, sampai wei terakhir.
+
+## Coba sendiri
+
+1. Di `anvil`, kirim 1 ETH ke alamat baru, lalu lihat receipt: gas 21.000 dan `logs` kosong.
+2. Di Ethereum, panggil `symbol()` dan `totalSupply()` pada BNB `0xB8c7…DD52`.
+3. Di BSC, baca saldo `0x…dEaD` dua kali dengan jarak beberapa jam.
+4. Di Ethereum, bandingkan `cast balance` WETH dengan `totalSupply()` WETH.
+
+```bash
+cast send <alamat-baru> --value 1ether --private-key <pk>   # di anvil
+cast receipt <tx-hash>                                      # gasUsed, logs
+cast code <alamat>                                          # ada bytecode = kontrak
+cast call <token> "symbol()(string)" --rpc-url <rpc>
+cast call <token> "totalSupply()(uint256)" --rpc-url <rpc>
+cast balance <alamat> --ether --rpc-url <rpc>
+```
 
 ---
 

@@ -1,29 +1,21 @@
 ---
 title: EVM 24 - Capstone SupplyWatch
 tags: [learning, evm, capstone, solidity, tokenomics, create2]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # Capstone: SupplyWatch
 
-Satu kontrak yang menggabungkan
-Sesi 1–23: mencatat supply efektif token dan laju burn-nya **on-chain**, tanpa owner, bisa diaudit siapa
-pun.
+Sesi 24 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md) — **penutup modul**. Kamu membangun satu kontrak yang menggabungkan Sesi
+1–23: mencatat supply efektif token dan laju burn-nya **on-chain**, tanpa owner, bisa diaudit siapa pun.
+Lanjutan dari [EVM 23 - Multi-Chain](EVM%2023%20-%20Multi-Chain.md).
 
-Project: `~/Documents/riset/evm/capstone` — `src/SupplyWatch.sol`, `test/SupplyWatch.t.sol` (6 unit + 2 fork),
-`script/DeploySupplyWatch.s.sol`.
-
-```bash
-cd ~/Documents/riset/evm/capstone
-forge test --match-contract SupplyWatchUnitTest -vv
-forge test --match-test test_UniLast30Days -vv
-forge test --match-test test_CakeLast12Months --compute-units-per-second 20 -vv
-```
+Hasil percobaan untuk materi ini ada di [EVM 24 - Hasil Praktik](Hasil%20Praktik/EVM%2024%20-%20Hasil%20Praktik.md).
 
 ## Masalah yang dijawab
 
-Riset tokenomics memakai angka supply/burn dari agregator (sering salah — CoinGecko di UNI, HYPE, ETHFI) atau
-dari script lokal (tidak bisa diverifikasi orang lain). `SupplyWatch` memindahkan perhitungannya on-chain.
+Riset tokenomics memakai angka supply/burn dari agregator (sering salah) atau dari script lokal (tidak bisa
+diverifikasi orang lain). `SupplyWatch` memindahkan perhitungannya on-chain.
 
 ## Desain
 
@@ -40,11 +32,11 @@ dari script lokal (tidak bisa diverifikasi orang lain). `SupplyWatch` memindahka
 
 ## Test
 
-### Unit (6, semua lolos)
+### Unit
 
-| Test | Membuktikan |
+| Test | Yang harus dibuktikan |
 | --- | --- |
-| `BothBurnStylesGiveTheSameEffectiveSupply` | `burn()` 100k + kirim 100k ke `0xdead` → `totalSupply` 900k, efektif **800k** |
+| `BothBurnStylesGiveTheSameEffectiveSupply` | `burn()` 100k + kirim 100k ke `0xdead` dari supply 1 jt → `totalSupply` 900k, efektif **800k** |
 | `CheckpointAtMostOncePerDay` | kedua kali di hari sama → `TooSoon`; setelah 1 hari → boleh |
 | `AnnualizedChange` | −2% dalam 73 hari → **−1.000 bps/tahun** |
 | `CheckpointFitsOneSlot` | dibaca langsung dari storage: supply di 128 bit atas, slot berikutnya kosong |
@@ -53,57 +45,45 @@ dari script lokal (tidak bisa diverifikasi orang lain). `SupplyWatch` memindahka
 
 ### Fork dengan token asli
 
-**UNI** (Ethereum, blok 25.830.000 → 26.046.700, 30 hari, `vm.rollFork` + `vm.makePersistent`):
+Untuk mengukur laju di masa lalu, test fork berpindah blok dengan `vm.rollFork`. Kontrak `SupplyWatch` yang
+di-deploy di blok awal harus ditandai `vm.makePersistent` supaya tetap ada setelah fork berpindah blok.
 
-| View | Awal → akhir | Laju |
-| --- | --- | ---: |
-| `totalSupply − 0xdead` | 890 jt → 887 jt | **−3,73%/th** |
-| `− 0xdead − treasury timelock` | 623 jt → 620 jt | **−5,33%/th** |
+- **UNI** (Ethereum, 30 hari): bandingkan view `totalSupply − 0xdead` dengan view yang juga mengecualikan
+  treasury timelock.
+- **CAKE** (BSC, 12 bulan): view `− 0xdead − Safe burn − MasterChefV2`.
 
-Lebih cepat dari −1,53% setahun di UNI Diperiksa dengan Saringan Lima Chain — revenue melonjak sejak
-fee switch v4 akhir Juli.
-
-**CAKE** (BSC, blok 62.230.887 → 123.707.633, 12 bulan), view `− 0xdead − Safe burn − MasterChefV2`:
-
-| Awal → akhir | Laju |
-| --- | ---: |
-| 366 jt → 336 jt | **−825 bps = −8,25%/th** |
-
-**Persis sama dengan CAKE Diperiksa Ulang 2026-09-24** — riset terverifikasi ulang dengan metode yang
-sama sekali berbeda.
+Hasil fork bisa dibandingkan dengan angka riset tokenomics yang dihitung dengan cara lain. Kalau dua metode yang
+sama sekali berbeda memberi angka yang sama, angkanya terverifikasi ulang.
 
 ## Deploy CREATE2
 
-`new SupplyWatch{salt: keccak256("afrijal.evm-learning.supply-watch.v1")}()` di forge script.
-
-| Chain | Alamat (simulasi, tidak di-broadcast) |
-| --- | --- |
-| prediksi `cast create2` | `0xEF4833b7FEF59289C4B96249A7F4975a122a5B3F` |
-| Ethereum (1) | `0xEF4833b7FEF59289C4B96249A7F4975a122a5B3F` |
-| Base (8453) | `0xEF4833b7FEF59289C4B96249A7F4975a122a5B3F` |
-| Arbitrum (42161) | `0xEF4833b7FEF59289C4B96249A7F4975a122a5B3F` |
+`new SupplyWatch{salt: keccak256("afrijal.evm-learning.supply-watch.v1")}()` di forge script. Alamatnya bisa
+diprediksi dengan `cast create2`, dan simulasi di chain mana pun harus memberi alamat yang sama.
 
 **Konsekuensi keamanan:** lewat deployer Arachnid, alamat tidak bergantung pada wallet — **siapa pun** bisa
 men-deploy bytecode ini ke alamat itu di chain mana pun. Aman untuk `SupplyWatch` (tanpa owner, tanpa argumen
 constructor: hasilnya selalu kontrak yang sama). **Berbahaya** untuk kontrak yang menetapkan owner dari
 constructor — penyerang bisa men-deploy duluan dengan owner-nya sendiri.
 
-## Ukuran dan gas
+## Jebakan
 
-| | |
-| --- | ---: |
-| Runtime | 3.669 byte |
-| Deploy | ~846.648 gas |
-| `register` | ~139.000 gas |
-| `checkpoint` | ~70.000–85.000 gas |
-| `effectiveSupply` (view) | ~17.600 gas |
-
-## Jebakan yang ditemui
-
-- **Checksum alamat Safe burn salah lagi** — disalin dari versi Sesi 5 yang dulu salah ketik. Semua alamat
-  kini divalidasi `cast to-check-sum-address`.
-- **drpc gratis** bisa `eth_call` historis tapi gagal/timeout saat fork membaca akun & storage lama (HTTP 408,
-  500). **Tenderly** (`mainnet.gateway.tenderly.co`) lolos keduanya.
+- **Checksum alamat yang disalin dari catatan lama** bisa salah ketik. Validasi semua alamat dengan
+  `cast to-check-sum-address`.
+- **RPC gratis** (mis. drpc) bisa melayani `eth_call` historis tapi gagal/timeout saat fork membaca akun &
+  storage lama (HTTP 408, 500). Tenderly (`mainnet.gateway.tenderly.co`) melayani keduanya.
 - `sed` dengan pemisah `#` gagal kalau teks penggantinya berisi `#`.
-- Alamat test contract Foundry `0x5615…b72f` punya saldo di mainnet (ada yang pernah mengirim ke sana).
+- Alamat test contract bawaan Foundry `0x5615…b72f` punya saldo di mainnet (ada yang pernah mengirim ke
+  sana). Di fork test, jangan anggap saldo kontrak test = 0.
 
+## Coba sendiri
+
+```bash
+forge test --match-contract SupplyWatchUnitTest -vv
+forge test --match-test test_UniLast30Days -vv
+forge test --match-test test_CakeLast12Months --compute-units-per-second 20 -vv
+```
+
+## Tugas
+
+Deploy sungguhan butuh saldo: jalankan bersama Sesi 21 setelah faucet masuk
+([EVM 21 - Deploy ke Testnet dan Verifikasi](EVM%2021%20-%20Deploy%20ke%20Testnet%20dan%20Verifikasi.md)).

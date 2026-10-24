@@ -1,16 +1,15 @@
 ---
 title: EVM 02 - Account Model
 tags: [learning, evm, ethereum, bsc, on-chain]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Account Model EVM
 
-Semua angka di sini hasil observasi langsung
-di `anvil` lokal (Foundry 1.7.1, chain ID 31337) dan BSC mainnet, bukan kutipan dokumentasi.
-Pembanding: Account Model Solana.
+Sesi 2 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md). Di sesi ini kamu belajar apa saja isi sebuah akun EVM, apa
+beda EOA dan contract account, dan bagaimana alamat kontrak ditentukan.
 
-Project praktik: `~/Documents/riset/evm/account-model` (template `forge init`, kontrak `Counter`).
+Hasil percobaan untuk materi ini ada di [EVM 02 - Hasil Praktik](Hasil%20Praktik/EVM%2002%20-%20Hasil%20Praktik.md).
 
 ## Satu kalimat yang menjelaskan semuanya
 
@@ -31,20 +30,17 @@ Project praktik: `~/Documents/riset/evm/account-model` (template `forge init`, k
 
 ## EOA
 
-Akun #0 `anvil` (`0xf39F…2266`): balance 10.000 ETH, nonce 0, code `0x`, storage kosong.
+**Alamat tidak perlu dibuat.** Setiap alamat 20 byte dianggap sudah ada dengan semua field
+bernilai nol, jadi alamat yang belum pernah dipakai pun langsung bisa menerima ETH.
 
-**Alamat tidak perlu dibuat.** Alamat acak yang belum pernah ada langsung bisa menerima 1 ETH.
-Setiap alamat 20 byte dianggap sudah ada dengan semua field bernilai nol. Beda dengan Solana,
-di mana akun harus dibuat dan dibayar rent-nya dulu.
+**Nonce menghitung transaksi keluar, bukan masuk.** Setiap kali sebuah akun mengirim transaksi,
+nonce-nya naik 1. Menerima transaksi tidak mengubah nonce. Fungsinya mencegah replay: transaksi
+yang sama tidak bisa dijalankan dua kali.
 
-**Nonce menghitung transaksi keluar, bukan masuk.** Setelah transfer: nonce pengirim 0 → 1,
-nonce penerima tetap 0. Fungsinya mencegah replay.
+**Transfer ETH polos = tepat 21.000 gas.** Biayanya 21.000 × harga gas.
 
-**Transfer ETH polos = tepat 21.000 gas.** Biaya terukur 0,000021000000021 ETH = 21.000 ×
-1,000000001 gwei.
-
-**Mengirim calldata ke EOA tidak gagal.** Transaksinya sukses tapi tidak melakukan apa-apa —
-tetap memakan nonce dan gas. Tidak ada kode yang bisa menolak.
+**Mengirim calldata ke EOA tidak gagal.** EOA tidak punya kode, jadi tidak ada yang bisa menolak.
+Transaksinya sukses tapi tidak melakukan apa-apa — tetap memakan nonce dan gas.
 
 ## Contract account
 
@@ -54,92 +50,69 @@ tetap memakan nonce dan gas. Tidak ada kode yang bisa menolak.
 alamat = keccak256(rlp(alamat_deployer, nonce_deployer))[12:]
 ```
 
-`cast compute-address 0xf39F…2266 --nonce 1` → `0xe7f1…0512`. `forge create` men-deploy ke
-alamat yang **persis sama**. Alamat kontrak murni fungsi dari siapa yang deploy dan nonce-nya.
+Alamat kontrak murni fungsi dari siapa yang deploy dan nonce-nya saat itu. `cast compute-address`
+menghitungnya sebelum deploy, dan `forge create` akan men-deploy ke alamat yang persis sama.
 
-### Isi kontrak Counter setelah deploy
+### Nonce kontrak mulai dari 1
 
-| | |
-| --- | --- |
-| code size | **481 byte** |
-| nonce | **1** (bukan 0) |
-| balance | 0 |
-| storage slot 0 | `number` (awal 0) |
+Sejak EIP-161, kontrak yang baru di-deploy langsung punya nonce 1, bukan 0. Nonce ini naik setiap
+kali kontrak itu membuat kontrak lain.
 
 ### Storage bisa dibaca mentah tanpa ABI
 
-`setNumber(42)` → `cast storage <kontrak> 0` = `0x…002a` = 42. Setelah `increment()` → 43, sama
-dengan `number()` lewat ABI. Ini cara membaca state kontrak walaupun tidak ada fungsi getter.
+Storage kontrak berupa slot 32 byte. Variabel pertama di kontrak biasanya ada di slot 0.
+`cast storage <kontrak> <slot>` membaca isi slot langsung, jadi state kontrak bisa dibaca
+walaupun kontrak itu tidak punya fungsi getter.
 
 ### Selector tertanam di bytecode
 
-| Fungsi | Selector | Ada di bytecode? |
-| --- | --- | --- |
-| `number()` | `0x8381f58a` | ya |
-| `setNumber(uint256)` | `0x3fb5c1cb` | ya |
-| `increment()` | `0xd09de08a` | ya |
+Setiap fungsi publik punya **selector** 4 byte (lihat [EVM 04 - ABI](EVM%2004%20-%20ABI.md)). Awal bytecode kontrak
+adalah **dispatcher**: ia membaca 4 byte pertama calldata, lalu lompat ke fungsi yang cocok.
 
-Awal bytecode adalah **dispatcher**: baca 4 byte pertama calldata, lompat ke fungsi yang
-cocok. Itu sebabnya `0x70a08231` (`balanceOf`) di riset tokenomics bisa dipanggil ke token mana
-pun — setiap ERC-20 punya selector yang sama di dispatcher-nya.
+Karena selector hanya bergantung pada nama dan tipe parameter fungsi, `balanceOf(address)` selalu
+`0x70a08231`. Itu sebabnya `balanceOf` bisa dipanggil ke token ERC-20 mana pun.
 
-## Observasi di BSC mainnet
+### Kontrak tidak bisa memulai transaksi
 
-Akun-akun dari CAKE Diperiksa Ulang 2026-09-24 dan BNB Diperiksa Ulang 2026-09-24:
+Setiap transaksi selalu diawali EOA. Kontrak hanya bergerak kalau dipanggil, entah langsung oleh
+EOA atau oleh kontrak lain yang dipanggil EOA. Kontrak yang "jalan otomatis" sebenarnya dipicu
+oleh bot EOA.
 
-| Akun | code | nonce | Artinya |
-| --- | ---: | ---: | --- |
-| CAKE token `0x0E09…cE82` | 7.285 byte | 1 | kontrak |
-| MasterChefV2 `0xa5f8…7652` | 15.151 byte | 1 | kontrak |
-| Safe burn `0xceba…4a0e` | **171 byte** | 1 | **proxy** — slot 0 = `0x3e5c63644e683549055b9be8653de26e0b4cd36e` (Gnosis Safe 1.3.0) |
-| `0x…dEaD` | 0 | **0** | EOA yang tidak pernah mengirim transaksi; memegang 16,5 jt BNB |
-| Bot `0xd099…48d4` | 0 | **6.725** | EOA yang memicu mint-burn **mingguan** CAKE (koreksi Sesi 4: bukan harian) |
+## Dua pola yang sering ditemui
 
-Tiga pelajaran:
+**Burn ke `0xdead`.** Alamat `0x000000000000000000000000000000000000dEaD` adalah EOA yang private
+key-nya tidak diketahui siapa pun. Nonce-nya 0, artinya alamat itu tidak pernah bisa mengirim
+transaksi. Token yang dikirim ke sana praktis hilang. Detail di [EVM 10 - Burn _burn vs 0xdead](EVM%2010%20-%20Burn%20_burn%20vs%200xdead.md).
 
-1. **Burn ke `0xdead` = kirim ke EOA yang private key-nya tidak diketahui siapa pun.** Nonce 0
-   membuktikan alamat itu tidak pernah bisa bertransaksi.
-2. **Kontrak tidak bisa memulai transaksi.** Setiap transaksi diawali EOA. MasterChef cuma
-   bergerak karena bot EOA `0xd099…` memanggilnya — 6.725 kali. (Sesi 4: bot ini memanggil Safe
-   → MultiSend → Timelock → MasterChefV2 seminggu sekali, lihat [EVM 04 - ABI](EVM%2004%20-%20ABI.md).)
-3. **Proxy kecil, logikanya di tempat lain.** Safe 171 byte menyimpan storage sendiri, tapi
-   meminjam logika dari kontrak di slot 0. Detail di Sesi 17.
+**Proxy.** Kontrak proxy berukuran kecil: ia menyimpan storage sendiri, tapi meminjam logika dari
+kontrak lain yang alamatnya disimpan di storage-nya. Detail di [EVM 17 - Proxy dan Upgrade](EVM%2017%20-%20Proxy%20dan%20Upgrade.md).
 
 ## Pengecualian modern: EIP-7702
 
 "EOA = code kosong" tidak lagi mutlak sejak upgrade Pectra. EOA bisa **mendelegasikan** code-nya
-ke kontrak lain.
+ke kontrak lain lewat transaksi tipe `0x4`.
 
-Percobaan di `anvil`: akun #1 (`0x7099…79C8`) mendelegasikan ke `Counter`, sekaligus memanggil
-`setNumber(7)` dalam satu transaksi.
-
-| | Sebelum | Sesudah |
-| --- | --- | --- |
-| Tipe transaksi | — | `0x4` |
-| code akun #1 | `0x` | `0xef0100e7f1725e7734ce288f8367e1bb143e90bb3f0512` (**23 byte**) |
-| `number()` di akun #1 | — | **7** |
-| `number()` di Counter asli | 43 | **43** (tidak berubah) |
-
-- Code 23 byte itu bukan bytecode, tapi **penunjuk**: `0xef0100` + alamat kontrak tujuan.
-- **Storage tetap milik EOA.** Akun #1 meminjam logika Counter, tapi state-nya tersimpan di
-  akun #1 sendiri. Konsep yang sama dengan proxy.
+- Setelah delegasi, code EOA berisi 23 byte. Itu bukan bytecode, tapi **penunjuk**: `0xef0100` +
+  alamat kontrak tujuan.
+- **Storage tetap milik EOA.** EOA meminjam logika kontrak tujuan, tapi state-nya tersimpan di EOA
+  sendiri. Konsepnya sama dengan proxy.
 - Transaksi delegasi memakan **dua nonce**: satu untuk transaksinya, satu untuk otorisasinya.
 
-**Jebakan yang ditemui:** delegasi yang dikirim tanpa calldata **revert** saat estimasi gas.
-Begitu delegasi berlaku, EOA langsung "menjadi" Counter, dan Counter tidak punya `receive()`.
-Solusinya: gabungkan delegasi dengan panggilan fungsi (`cast send <eoa> "setNumber(uint256)" 7 --auth <kontrak>`).
+**Jebakan:** delegasi yang dikirim tanpa calldata bisa **revert** saat estimasi gas. Begitu
+delegasi berlaku, EOA langsung "menjadi" kontrak tujuan. Kalau kontrak itu tidak punya
+`receive()`, transaksi tanpa calldata gagal. Solusinya: gabungkan delegasi dengan panggilan
+fungsi (`cast send <eoa> "setNumber(uint256)" 7 --auth <kontrak>`).
 
-## EVM vs Solana
+## Coba sendiri
 
-| | EVM | Solana (Account Model Solana) |
-| --- | --- | --- |
-| Akun baru | otomatis ada, semua field nol | harus dibuat + bayar rent |
-| Code dan data | di akun yang sama (`code` + `storage`) | dipisah: program account vs data account |
-| Token | saldo disimpan di storage kontrak token (`balanceOf`) | token account terpisah per pemilik per mint |
-| Pembeda tipe akun | isi field `code` | field `executable` + `owner` |
-| Siapa memulai transaksi | selalu EOA | signer (keypair) |
+Jalankan `anvil`, lalu:
 
-## Perintah
+1. Cek akun #0: `cast balance`, `cast nonce`, `cast code`. Code harus `0x`.
+2. Kirim ETH ke alamat acak, lalu cek nonce pengirim dan penerima.
+3. Hitung alamat kontrak dengan `cast compute-address`, deploy `Counter` dengan `forge create`,
+   lalu bandingkan alamatnya.
+4. Panggil `setNumber(42)`, lalu baca slot 0 dengan `cast storage`.
+5. Cari selector `number()` (`cast sig 'number()'`) di output `cast code`.
 
 ```bash
 anvil --port 8545                                  # chain lokal, 10 akun @ 10.000 ETH

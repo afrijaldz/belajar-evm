@@ -1,14 +1,14 @@
 ---
 title: EVM 01.15 - Validator Client
 tags: [learning, evm, ethereum]
-updated: 2026-10-10
+updated: 2026-10-24
 ---
 
 # Validator Client
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md) · [EVM 01.16 - Slashing](EVM%2001.16%20-%20Slashing.md) →
 
-Pertanyaan: validator client itu jalan di mana?
+Hasil percobaan untuk materi ini ada di [EVM 01.15 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.15%20-%20Hasil%20Praktik.md).
 
 **Validator client adalah program terpisah.** Biasanya ia jalan di komputer yang sama dengan
 consensus client (beacon node) dan terhubung ke beacon node lewat Beacon API. Ia **tidak**
@@ -48,8 +48,9 @@ validator 32 ETH).
 4. Menyimpan **slashing protection database**: catatan semua yang sudah ditandatangani, supaya
    tidak pernah menandatangani dua hal yang bertentangan.
 
-Langkah 4 dari pengetahuan umum. Jadwal pembuat blok dicek di Bukti di bawah; langkah 2 (satu
-attestation per epoch) dicek lewat data komite di [EVM 01.17 - Attestation](EVM%2001.17%20-%20Attestation.md).
+Jadwal pembuat blok dari endpoint di langkah 1 berisi 32 entri per epoch, satu pembuat blok
+per slot. Slot pertama epoch N adalah N × 32. Beacon block di slot itu nanti punya
+`proposer_index` yang sama dengan jadwalnya.
 
 ## Kenapa dipisah dari beacon node
 
@@ -70,10 +71,11 @@ attestation per epoch) dicek lewat data komite di [EVM 01.17 - Attestation](EVM%
 | DVT (mis. Obol, SSV) | beberapa operator, masing-masing menjalankan VC | kunci dipecah; tanda tangan butuh mayoritas operator |
 | Staking pool / exchange | infrastruktur operator | operator; pemilik ETH tidak menjalankan apa pun |
 
-Tabel ini dari pengetahuan umum. Dari luar, lokasi validator client tidak bisa dilihat: Beacon
-API cuma menunjukkan tanda tangan dan jadwal, bukan mesinnya.
+Dari luar, lokasi validator client tidak bisa dilihat: Beacon API cuma menunjukkan tanda tangan
+dan jadwal, bukan mesinnya. Petunjuk kecil ada di **graffiti** blok: teks bebas yang diisi
+operator, dan sering menyebut nama client (mis. `Nimbus/v26.7.0-…`).
 
-Program VC per tim client (pengetahuan umum): Lighthouse `lighthouse vc`, Prysm `validator`,
+Program VC per tim client: Lighthouse `lighthouse vc`, Prysm `validator`,
 Lodestar `lodestar validator`. Teku dan Nimbus bisa menjalankan VC di dalam proses beacon node
 atau terpisah.
 
@@ -93,20 +95,27 @@ protection database ikut dipindah.
 | Dipakai untuk | menandatangani blok dan attestation | tujuan penarikan stake dan reward |
 | Kalau dicuri | pencuri bisa membuat validator kena slashing | pencuri bisa mengambil dana |
 
-Jadi validator client tidak pernah memegang kunci yang bisa memindahkan ETH. Kolom "kalau
-dicuri" dari pengetahuan umum.
+Jadi validator client tidak pernah memegang kunci yang bisa memindahkan ETH. Data validator di
+Beacon API memperlihatkan keduanya: public key BLS 48 byte, dan `withdrawal_credentials` berupa
+`0x01` + alamat. Alamat penarikan itu akun execution biasa (EOA, code kosong), terpisah dari
+kunci tanda tangan. Tanda tangan BLS di blok berukuran 96 byte.
 
-## Bukti (2026-10-10)
+## Coba sendiri
 
-Data dari Beacon API dan JSON-RPC publicnode.
+1. Ambil jadwal pembuat blok satu epoch dari Beacon API (endpoint yang juga dipanggil validator
+   client).
+2. Tunggu salah satu slot di jadwal itu, lalu cocokkan `proposer_index` di beacon block dengan
+   jadwalnya. Lihat juga `signature` dan `graffiti`.
+3. Buka data salah satu validator: public key, `withdrawal_credentials`, status, saldo.
+4. Cek alamat penarikannya lewat JSON-RPC: code, nonce, saldo.
 
-| Cek | Hasil |
-| --- | --- |
-| `/eth/v1/validator/duties/proposer/481224` (endpoint yang juga dipanggil validator client) | 32 entri = satu pembuat blok per slot, 32 validator berbeda; slot pertama 15.399.168 = 481.224 × 32 |
-| Jadwal slot 15.399.172 | validator **2.365.600** |
-| Beacon block head slot 15.399.172 | `proposer_index` **2.365.600** → sesuai jadwal; signature 96 byte (BLS); graffiti `Nimbus/v26.7.0-4110bc-stateofus` (graffiti diisi bebas oleh operator, di sini menunjukkan client Nimbus) |
-| Validator 2.092.386 (dari [EVM 01.14 - Execution Client dan Consensus Client](EVM%2001.14%20-%20Execution%20Client%20dan%20Consensus%20Client.md)) | public key **48 byte** (BLS); `withdrawal_credentials` `0x01` + alamat `0x84af…9985`; aktif sejak epoch 396.373; saldo 32,0636 ETH; `slashed` false |
-| Alamat penarikan `0x84af…9985` lewat JSON-RPC | code 0 byte (EOA), nonce 32, saldo 8,57 ETH → kunci penarikan adalah akun execution biasa, terpisah dari kunci tanda tangan validator |
+```bash
+BEACON=https://ethereum-beacon-api.publicnode.com
+curl -s $BEACON/eth/v1/validator/duties/proposer/<epoch>
+curl -s $BEACON/eth/v2/beacon/blocks/<slot> | jq '.data.message | {proposer_index}'
+curl -s $BEACON/eth/v1/beacon/states/head/validators/<index>
+cast code <alamat-penarikan> --rpc-url https://ethereum-rpc.publicnode.com
+```
 
 ---
 

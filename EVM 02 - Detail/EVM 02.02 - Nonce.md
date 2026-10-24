@@ -1,12 +1,14 @@
 ---
 title: EVM 02.02 - Nonce
 tags: [learning, evm, account, nonce]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Nonce
 
 Bagian dari [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) · ← [EVM 02.01 - EOA dan Contract Account](EVM%2002.01%20-%20EOA%20dan%20Contract%20Account.md)
+
+Hasil percobaan untuk materi ini ada di [EVM 02.02 - Hasil Praktik](../Hasil%20Praktik/EVM%2002.02%20-%20Hasil%20Praktik.md).
 
 **Nonce adalah nomor urut di setiap akun.** Untuk EOA, nonce = jumlah transaksi yang sudah
 dikirim. Untuk contract account, nonce = jumlah kontrak yang sudah ia buat, ditambah 1.
@@ -47,25 +49,25 @@ Akun A (nonce sekarang = 3)
    Karena nonce selalu naik, setiap deploy menghasilkan alamat yang berbeda dan bisa
    diprediksi sebelum deploy (lihat [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md#alamat-kontrak-bisa-diprediksi-sebelum-deploy)).
 
-## Aturan yang terbukti di anvil
+## Aturan nonce di node
 
-| Percobaan | Hasil |
+| Situasi | Yang terjadi |
 | --- | --- |
-| Akun #0 kirim ETH 3 kali ke akun #1 | nonce pengirim 59 → 62, nonce penerima tetap **0** |
-| Kirim lagi dengan `--nonce 1` (sudah terpakai) | `error code -32003: nonce too low` |
-| Raw tx yang sama di-`publish` dua kali | pertama sukses, kedua `nonce too low` (replay ditolak) |
-| Deploy init code yang langsung `REVERT` (`0x60006000fd`) | status `0x0`, gas tetap terpakai, nonce tetap naik 65 → 66 |
-| Kirim tx dengan nonce 64 saat nonce akun 63 | tx tidak masuk blok; `eth_getTransactionCount … pending` tetap `0x3f` (63) |
-| Lalu kirim tx nonce 63 | keduanya masuk blok, nonce jadi **65** |
-| Automine dimatikan, kirim nonce 69 (2 gwei), lalu nonce 69 lagi (3 gwei) | tx kedua **menggantikan** tx pertama; blok `0x45` hanya berisi tx kedua (`value` 2) |
-| Kirim nonce 69 ketiga kalinya dengan fee yang sama (3 gwei) | `replacement transaction underpriced` |
+| Akun mengirim transaksi | nonce pengirim naik 1 per transaksi; nonce penerima tidak berubah |
+| Tx dengan nonce yang sudah terpakai | ditolak: `nonce too low` |
+| Raw tx yang sama dikirim dua kali | yang pertama masuk, yang kedua `nonce too low` (replay ditolak) |
+| Tx yang revert (termasuk deploy yang init code-nya langsung `REVERT`) | masuk blok dengan status `0x0`, gas tetap terpakai, nonce tetap naik |
+| Tx dengan nonce yang melompat (ada celah) | tertahan di mempool, tidak masuk blok; `eth_getTransactionCount … pending` belum berubah |
+| Celahnya diisi | tx pengisi celah dan tx yang tertahan masuk blok berurutan |
+| Tx kedua dengan nonce sama dan fee lebih tinggi, sebelum tx pertama masuk blok | tx kedua **menggantikan** tx pertama; blok hanya berisi tx kedua |
+| Tx dengan nonce sama dan fee yang sama dengan tx yang sedang menunggu | ditolak: `replacement transaction underpriced` |
 
-Pelajaran dari baris terakhir: **satu nonce = satu slot transaksi.** Selama transaksi belum
+Dua baris terakhir menunjukkan bahwa **satu nonce = satu slot transaksi.** Selama transaksi belum
 masuk blok, slot itu bisa ditimpa dengan transaksi lain yang fee-nya lebih tinggi. Wallet
 memakai cara ini untuk fitur "speed up" (transaksi sama, fee lebih tinggi) dan "cancel"
 (kirim 0 ETH ke diri sendiri dengan nonce yang sama, fee lebih tinggi).
 
-Perintah yang dipakai:
+Perintah untuk mencobanya:
 
 ```bash
 cast nonce $A -r $RPC                                   # nonce akun (latest)
@@ -73,19 +75,19 @@ cast rpc -r $RPC eth_getTransactionCount $A pending     # nonce termasuk tx di m
 cast send ... --nonce 1                                 # paksa nonce tertentu
 RAW=$(cast mktx ...); cast publish $RAW; cast publish $RAW   # uji replay
 cast rpc evm_setAutomine false                          # tahan tx di mempool
+cast rpc evm_mine                                       # tambang satu blok
 ```
 
 ## Nonce kontrak
 
 Kontrak tidak mengirim transaksi, jadi nonce-nya hanya naik saat ia membuat kontrak lain
-dengan opcode `CREATE`. Percobaan dengan factory dari bytecode mentah
-`600060006000f000` (`CREATE(0,0,0)` lalu `STOP`):
+dengan opcode `CREATE`.
 
-| Langkah | Hasil |
-| --- | --- |
-| Factory baru di-deploy | nonce factory = **1**, bukan 0 (EIP-161) |
-| Factory dipanggil 2 kali (2× `CREATE`) | nonce factory = **3** |
-| `cast compute-address <factory> --nonce 1` dan `--nonce 2` | kedua alamat itu sekarang ada, masing-masing dengan nonce **1** |
+- Kontrak yang baru di-deploy langsung punya nonce **1**, bukan 0 (EIP-161).
+- Setiap `CREATE` menaikkan nonce kontrak pembuatnya 1. Factory yang sudah memanggil `CREATE`
+  dua kali punya nonce 3.
+- Kontrak pertama yang dibuat factory ada di `cast compute-address <factory> --nonce 1`, yang
+  kedua di `--nonce 2`, dan seterusnya.
 
 Akun yang dibuat lewat `CREATE` juga mulai dari nonce 1. Itu sebabnya alamat hasil prediksi
 bisa dicek: nonce 1 berarti akun itu sudah dibuat, nonce 0 berarti belum.
@@ -93,13 +95,20 @@ bisa dicek: nonce 1 berarti akun itu sudah dibuat, nonce 0 berarti belum.
 `CREATE2` juga menaikkan nonce factory, tetapi alamatnya dihitung dari `salt` dan hash
 bytecode, bukan dari nonce.
 
-## Data mainnet Ethereum (2026-10-03)
+## Coba sendiri
 
-| Akun | nonce | Artinya |
-| --- | --- | --- |
-| Vitalik `0xd8dA…6045` | **5966** | sudah mengirim 5.966 transaksi |
-| USDC `0xA0b8…eB48` | **1** | kontrak yang belum pernah membuat kontrak lain |
-| `0x…dEaD` | **0** | tidak pernah mengirim apa pun; private key-nya tidak diketahui siapa pun |
+Jalankan `anvil`, lalu:
+
+1. Kirim ETH beberapa kali dari akun #0 ke akun #1. Cek nonce keduanya.
+2. Kirim lagi dengan `--nonce` yang sudah terpakai.
+3. Buat raw tx dengan `cast mktx`, lalu `cast publish` dua kali.
+4. Deploy init code yang langsung revert (`0x60006000fd`) dan cek nonce sebelum dan sesudahnya.
+5. Kirim tx dengan nonce yang melompat 1, cek nonce `pending`, lalu isi celahnya.
+6. Matikan automine, kirim dua tx dengan nonce sama (fee kedua lebih tinggi), lalu tambang blok
+   dan lihat isinya. Coba juga tx ketiga dengan fee yang sama.
+7. Deploy factory dari bytecode mentah `600060006000f000` (`CREATE(0,0,0)` lalu `STOP`),
+   panggil dua kali, lalu cek nonce factory dan alamat hasil `cast compute-address`.
+8. Bandingkan nonce beberapa akun di mainnet: wallet aktif, kontrak token, dan `0x…dEaD`.
 
 ## Hal yang sering membingungkan
 

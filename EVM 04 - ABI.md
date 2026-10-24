@@ -1,17 +1,16 @@
 ---
 title: EVM 04 - ABI
 tags: [learning, evm, ethereum, bsc, abi]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # ABI EVM
 
-Semua hasil observasi langsung dengan `cast`
-(Foundry 1.7.1), `anvil` lokal, dan satu transaksi nyata di BSC. Lanjutan dari
-[EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md).
+Sesi 4 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), lanjutan dari [EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md). Di sesi ini kamu
+belajar bagaimana nama fungsi, argumen, dan event diubah menjadi byte: selector, encoding
+calldata, dan struktur log.
 
-Project praktik: `~/Documents/riset/evm/account-model` (kontrak `AbiLab` dengan event indexed
-string dan event anonymous).
+Hasil percobaan untuk materi ini ada di [EVM 04 - Hasil Praktik](Hasil%20Praktik/EVM%2004%20-%20Hasil%20Praktik.md).
 
 ## Selector
 
@@ -29,9 +28,9 @@ keccak256("transfer(address,uint256)") = 0xa9059cbb2ab0…  → selector 0xa9059
 | `burn(uint256)` | `0x42966c68` | **tabrakan** ↓ |
 | `collate_propagate_storage(bytes16)` | `0x42966c68` | **tabrakan** ↑ |
 
-4 byte = cuma ~4,3 miliar kemungkinan, jadi tabrakan bisa dicari dengan sengaja. `cast 4byte
-0x42966c68` mengembalikan **dua nama**. Nama fungsi dari database selector publik (juga yang
-ditampilkan explorer untuk kontrak tidak terverifikasi) hanyalah tebakan.
+4 byte = cuma ~4,3 miliar kemungkinan, jadi tabrakan bisa dicari dengan sengaja. Untuk selector
+`0x42966c68`, `cast 4byte` mengembalikan **dua nama**. Nama fungsi dari database selector publik
+(juga yang ditampilkan explorer untuk kontrak tidak terverifikasi) hanyalah tebakan.
 
 ## Encoding argumen statis
 
@@ -76,7 +75,8 @@ cast decode-abi 'x()(string,uint256[])' <data>                  # decode data lo
 
 ## Event
 
-`Note(address indexed by, string indexed tag, string text, uint256[] values)`:
+Contoh event `Note(address indexed by, string indexed tag, string text, uint256[] values)`
+yang dipancarkan dengan `tag = "burn"`:
 
 | Bagian | Isi |
 | --- | --- |
@@ -87,68 +87,57 @@ cast decode-abi 'x()(string,uint256[])' <data>                  # decode data lo
 
 - **`indexed` tipe dinamis disimpan sebagai hash.** Bisa difilter dengan nilai persis, tapi
   teks aslinya tidak bisa dibaca balik dari log.
-- **Event `anonymous` tidak punya `topics[0]`** — `Ping(99)` menghasilkan `topics: []`. Tidak bisa
-  difilter berdasarkan nama event.
+- **Event `anonymous` tidak punya `topics[0]`** — misalnya event anonymous `Ping(99)` tanpa
+  parameter indexed menghasilkan `topics: []`. Tidak bisa difilter berdasarkan nama event.
 - Maksimal 4 topic (1 signature + 3 indexed).
 - **Status indexed tidak ikut di-hash ke `topics[0]`.** Signature yang sama bisa punya susunan
   indexed berbeda di kontrak lain. Decode log yang benar butuh **ABI kontraknya**, bukan cuma
   database selector.
 
-## Studi kasus: transaksi mint-burn CAKE
+## Calldata berlapis: multisig, MultiSend, Timelock
 
-Transaksi `0xb7a7e2989258cde2b25942484f051d3168e65b9db0d0d11f750f211d780abd11` (BSC,
-2026-09-21 06:51 UTC) dari CAKE Diperiksa Ulang 2026-09-24. Calldata 1.476 byte.
-
-### Lapisan calldata
+Transaksi admin di protokol nyata jarang berupa satu panggilan langsung. Biasanya calldata-nya
+berlapis, dan setiap lapisan perlu di-decode satu per satu:
 
 ```
-EOA bot 0xd099… (nonce 6.725)
- └─ Safe 0xeCc9….execTransaction (selector 0x6a761202)
-      tanda tangan 195 byte = 3 × 65 byte → 3 signer
+EOA (bot / signer)
+ └─ Safe.execTransaction (selector 0x6a761202)
+      tanda tangan = N × 65 byte → N signer
       operation = 1 (delegatecall)
-     └─ MultiSend 0x40A2….multiSend(bytes) (0x8d80ff0a)
+     └─ MultiSend.multiSend(bytes) (0x8d80ff0a)
           format packed: op (1) | to (20) | value (32) | panjang (32) | data
-         ├─ Timelock 0xa1f4….executeTransaction(address,uint256,string,bytes,uint256) (0x0825f38f)
-         │    target MasterChefV2, signature "burnCake(bool)", data true, eta 2026-09-21 01:00 UTC
-         └─ Timelock 0xa1f4….queueTransaction(...) (0x3a66f901)
-              target MasterChefV2, signature "burnCake(bool)", data true, eta 2026-09-28 01:00 UTC
+         ├─ Timelock.executeTransaction(address,uint256,string,bytes,uint256) (0x0825f38f)
+         └─ Timelock.queueTransaction(...) (0x3a66f901)
 ```
 
-- **Siklusnya mingguan.** Selisih eta = 604.800 detik = 7 hari. Tiap minggu multisig
-  menjalankan perintah yang diantrekan minggu lalu dan mengantrekan perintah minggu depan.
-- **Timelock memaksa jeda 7 hari**, jadi perintah minggu depan sudah bisa dibaca on-chain hari
-  ini lewat `queueTransaction`.
-- Timelock gaya Compound menerima **`string signature`** (`"burnCake(bool)"`) dan menghitung
-  selector sendiri.
-- **Catatan MultiSend:** di dalam `bytes` ada format *packed* (bukan ABI standar) — tiap
-  sub-transaksi disambung tanpa padding. Harus di-parse manual.
+- **Safe (Gnosis Safe)** adalah multisig. Panjang tanda tangan dibagi 65 byte = jumlah signer
+  yang ikut menandatangani.
+- **MultiSend** menggabungkan beberapa sub-transaksi dalam satu `bytes`. Isinya format *packed*
+  (bukan ABI standar) — tiap sub-transaksi disambung tanpa padding. Harus di-parse manual.
+- **Timelock** memaksa jeda antara "antre" (`queueTransaction`) dan "eksekusi"
+  (`executeTransaction`). Karena perintah harus diantrekan dulu, perintah yang akan dieksekusi
+  nanti sudah bisa dibaca on-chain sekarang.
+- Timelock gaya Compound menerima **`string signature`** (misalnya `"burnCake(bool)"`) dan
+  menghitung selector sendiri.
+- Untuk membaca log transaksi seperti ini, cocokkan setiap log dengan kontrak yang
+  memancarkannya (`address`), lalu decode dengan ABI kontrak itu. Event `Deposit` dengan
+  `amount = 0` di kontrak farming gaya MasterChef biasanya berarti **panen**, bukan setor.
 
-### 17 log
+## Jebakan
 
-| Log | Emitter | Event | Arti |
-| ---: | --- | --- | --- |
-| 0–1 | Safe + `0x53a1…78f1` | `SafeMultiSigTransaction`, `SafeTxData` | catatan eksekusi multisig |
-| 2–8 | MasterChefV2 | 7× `UpdatePool` | 7 pool dummy diperbarui |
-| 9 | CAKE | `Transfer` 0x0 → Safe burn `0xceba…`, **530.328** | mint 10% dev share |
-| 10 | CAKE | `Transfer` 0x0 → SyrupBar `0x009c…`, **5.303.280** | mint 90% |
-| 11 | CAKE | `Transfer` SyrupBar → MasterChefV2, 5.303.280 | diteruskan |
-| 12 | MasterChefV1 `0x73fe…` | `Deposit(user=MCv2, pid=526, amount=0)` | amount 0 = **panen**, bukan setor |
-| 13 | CAKE | `Transfer` MasterChefV2 → Safe burn, **54.049.639** | `burnCake` |
-| 14–15 | Timelock | `ExecuteTransaction`, `QueueTransaction` | eksekusi + antre |
-| 16 | Safe | `ExecutionSuccess` | selesai |
+- Argumen negatif ke `cast calldata` perlu hati-hati: `-1` bisa dibaca sebagai flag.
+- `pkill -f <pola>` bisa ikut membunuh shell yang menjalankannya kalau polanya ada di command line
+  shell itu sendiri.
 
-Terverifikasi: `0x009c…` = `"SyrupBar Token"`; `MasterChefV1.cakePerBlock()` = **40 CAKE**.
+## Coba sendiri
 
-**Belum cocok:** di transaksi ini MCv2 cuma menerima 5,3 jt tapi mengirim 54,0 jt ke Safe burn,
-padahal saldo MCv2 di titik-titik sampel selalu kecil (~0,37 jt). Kemungkinan sisanya dipanen
-oleh transaksi lain sepanjang minggu — belum dibuktikan. Jawab di Sesi 16.
-
-## Koreksi ke catatan sebelumnya
-
-[EVM 02 - Account Model](EVM%2002%20-%20Account%20Model.md) menyebut bot `0xd099…` memicu mint-burn **harian**. Yang benar
-**mingguan** — sudah diperbaiki di sana dan di CAKE Diperiksa Ulang 2026-09-24.
-
-## Perintah
+1. Hitung selector beberapa signature dengan `cast sig`, termasuk versi dengan `uint` dan spasi.
+2. Cari nama untuk selector `0x42966c68` dengan `cast 4byte`.
+3. Encode `f(uint256,string,uint256[])` dengan `cast calldata`, lalu pecah per 32 byte dan cocokkan
+   dengan tabel head + tail di atas.
+4. Tulis kontrak dengan event yang punya `string indexed` dan event `anonymous`, panggil di `anvil`,
+   lalu lihat topics-nya di receipt.
+5. Ambil satu transaksi multisig nyata dengan `cast tx <hash> input`, lalu decode lapis demi lapis.
 
 ```bash
 cast sig 'transfer(address,uint256)'
@@ -159,7 +148,3 @@ cast 4byte <selector> ; cast 4byte-event <topic0> ; cast 4byte-calldata <calldat
 cast decode-abi 'x()(string,uint256[])' <log data>
 cast tx <hash> input --rpc-url <rpc> ; cast receipt <hash> --json --rpc-url <rpc>
 ```
-
-Jebakan tooling: argumen negatif ke `cast calldata` perlu hati-hati (`-1` bisa dibaca sebagai
-flag); `pkill -f <pola>` bisa ikut membunuh shell yang menjalankannya kalau polanya ada di
-command line shell itu sendiri.

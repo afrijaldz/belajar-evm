@@ -1,12 +1,14 @@
 ---
 title: EVM 01.10 - Format Alamat 0x
 tags: [learning, evm, address]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Format Alamat 0x
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.09 - Bytecode yang Sama](EVM%2001.09%20-%20Bytecode%20yang%20Sama.md) · [EVM 01.11 - RPC eth](EVM%2001.11%20-%20RPC%20eth.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.10 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.10%20-%20Hasil%20Praktik.md).
 
 Dua hal yang terpisah:
 
@@ -16,7 +18,7 @@ Dua hal yang terpisah:
    private key → public key (secp256k1, 64 byte) → `keccak256(public key)` (32 byte) →
    ambil **20 byte terakhir**.
 
-Bukti dengan key default anvil #0 (2026-10-03):
+Contoh dengan key default anvil #0. Alamatnya adalah 20 byte terakhir dari hash public key:
 
 ```
 public key   = 0x8318535b…0d2aa5 (64 byte)
@@ -28,8 +30,20 @@ Huruf besar-kecil campuran di alamat adalah **checksum EIP-55**: kapitalisasi di
 hash alamat itu sendiri, jadi salah ketik satu karakter bisa dideteksi wallet.
 
 Karena semua chain EVM memakai rumus ini, **satu private key = alamat yang sama di semua
-chain EVM**. Solana berbeda: alamatnya public key ed25519 32 byte yang ditulis dalam base58
-(tanpa `0x`), dan Bitcoin pakai format lain lagi (base58/bech32, mis. `bc1…`).
+chain EVM**. Chain non-EVM seperti Bitcoin memakai format lain (base58/bech32, mis. `bc1…`).
+
+## Coba sendiri
+
+1. Ambil private key akun #0 dari output `anvil`.
+2. Turunkan public key-nya, lalu hash dengan `keccak256`.
+3. Bandingkan 20 byte terakhir hash dengan alamat akun #0.
+
+```bash
+cast wallet public-key --raw-private-key <pk>      # public key 64 byte
+cast keccak <public-key>                           # hash 32 byte
+cast wallet address --private-key <pk>             # alamat (sudah dengan checksum EIP-55)
+cast to-check-sum-address <alamat-huruf-kecil>     # hitung checksum EIP-55
+```
 
 ---
 

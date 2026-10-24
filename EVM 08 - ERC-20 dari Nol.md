@@ -1,16 +1,16 @@
 ---
 title: EVM 08 - ERC-20 dari Nol
 tags: [learning, evm, solidity, erc20, foundry]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # ERC-20 dari Nol
 
-Token ditulis sendiri tanpa library, diuji
-dengan Foundry (14 test, 2 di antaranya fuzz × 256 run), lalu di-deploy ke `anvil`. Lanjutan dari
-[EVM 07 - Dasar Solidity](EVM%2007%20-%20Dasar%20Solidity.md).
+Sesi 8 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), lanjutan dari [EVM 07 - Dasar Solidity](EVM%2007%20-%20Dasar%20Solidity.md). Di sesi ini kamu
+menulis token ERC-20 sendiri tanpa library, mengujinya dengan Foundry (termasuk fuzz test), lalu
+men-deploy-nya ke `anvil`.
 
-Project: `~/Documents/riset/evm/solidity-basics` — `src/MyToken.sol`, `test/MyToken.t.sol`.
+Hasil percobaan untuk materi ini ada di [EVM 08 - Hasil Praktik](Hasil%20Praktik/EVM%2008%20-%20Hasil%20Praktik.md).
 
 ## Isinya cuma dua mapping
 
@@ -20,33 +20,35 @@ mapping(address => mapping(address => uint256)) public allowance;
 ```
 
 Ditambah `totalSupply`, `name`, `symbol`, `decimals`, fungsi `transfer` / `approve` /
-`transferFrom`, dan event `Transfer` / `Approval`. Sekitar 60 baris. Bytecode **3.091 byte** (CAKE
-7.285 byte — sisanya delegasi/checkpoint suara dan `mint` owner).
+`transferFrom`, dan event `Transfer` / `Approval`. Sekitar 60 baris. Token nyata biasanya lebih
+besar karena fitur tambahan, misalnya delegasi dan checkpoint suara governance, atau fungsi
+`mint` milik owner.
 
 ## Selector dan event identik dengan token nyata
 
-| | MyToken | Dipakai di riset |
-| --- | --- | --- |
-| `balanceOf(address)` | `0x70a08231` | ✓ `eth_call` CAKE, UNI, ETHFI |
-| `totalSupply()` | `0x18160ddd` | ✓ |
-| `transfer(address,uint256)` | `0xa9059cbb` | ✓ |
-| `Transfer(address,address,uint256)` | `0xddf252ad…` | ✓ filter `eth_getLogs` burn |
+| | Selector / topic |
+| --- | --- |
+| `balanceOf(address)` | `0x70a08231` |
+| `totalSupply()` | `0x18160ddd` |
+| `transfer(address,uint256)` | `0xa9059cbb` |
+| `Transfer(address,address,uint256)` | `0xddf252ad…` |
 
-`balanceOf` dan `allowance` di MyToken **bukan fungsi** — mapping `public` otomatis dapat getter
-dengan selector yang sama. Script riset (eth_call selector mentah, `cast logs` topic Transfer)
-jalan di token ini **tanpa perubahan**. Itulah gunanya standar.
+`balanceOf` dan `allowance` di token ini **bukan fungsi** — mapping `public` otomatis dapat getter
+dengan selector yang sama. Karena selector dan topic event-nya sama dengan token nyata, script
+yang membaca token ERC-20 lewat selector mentah (`eth_call`) atau topic `Transfer` (`cast logs`)
+jalan di token buatanmu **tanpa perubahan**. Itulah gunanya standar.
 
 ## Keputusan desain
 
 | Keputusan | Alasan |
 | --- | --- |
-| Mint di constructor = `emit Transfer(address(0), …)` | konvensi yang dipakai explorer dan indexer. Di Sesi 4, mint CAKE dikenali dari Transfer `0x0 → …` |
+| Mint di constructor = `emit Transfer(address(0), …)` | konvensi yang dipakai explorer dan indexer untuk mengenali mint (lihat contoh mint CAKE di [EVM 04 - ABI](EVM%2004%20-%20ABI.md)) |
 | Transfer ke `address(0)` ditolak | EIP-20 tidak melarang, tapi token hilang tanpa mengurangi `totalSupply` |
 | Transfer nilai 0 diizinkan | EIP-20: *MUST be treated as normal transfers* |
 | Allowance `type(uint256).max` tidak dikurangi | "unlimited approve" — hemat satu tulis storage |
 | Custom error (`InsufficientBalance`, …) | lebih murah + membawa data (lihat [EVM 07 - Dasar Solidity](EVM%2007%20-%20Dasar%20Solidity.md)) |
 
-## Test
+## Apa yang perlu diuji
 
 | Kelompok | Isi |
 | --- | --- |
@@ -56,7 +58,7 @@ jalan di token ini **tanpa perubahan**. Itulah gunanya standar.
 | Tepi | transfer ke diri sendiri, transfer 0, allowance unlimited |
 | **Fuzz** | total saldo tetap = supply untuk `to`/`amount` acak; tidak bisa belanja melebihi allowance |
 
-### Bug klasik yang ditangkap test
+### Bug klasik: transfer ke diri sendiri
 
 Menyimpan saldo penerima **sebelum** saldo pengirim dikurangi:
 
@@ -66,27 +68,24 @@ balanceOf[from] = fromBalance - value;
 balanceOf[to] = toBalance + value;          // kalau from == to, pengurangan tertimpa
 ```
 
-Transfer 100 ke diri sendiri → saldo **1.000.000 → 1.000.100**. Token tercetak dari udara,
-`totalSupply` tidak berubah.
+Kalau `from == to`, pengurangan tertimpa, jadi saldo **bertambah** sebesar `value`. Token tercetak
+dari udara, `totalSupply` tidak berubah.
 
-**Yang menangkap: test manual `test_TransferToSelfKeepsBalance`, bukan fuzz.** Fuzz test memakai
-`vm.assume(to != alice)` sehingga tidak pernah mencoba transfer ke diri sendiri. **Setiap
-pengecualian di fuzz = area yang tidak diuji.**
+**Jebakan:** fuzz test yang memakai `vm.assume(to != alice)` tidak pernah mencoba transfer ke diri
+sendiri, jadi bug ini lolos dari fuzz. Yang menangkapnya test manual seperti
+`test_TransferToSelfKeepsBalance`. **Setiap pengecualian di fuzz = area yang tidak diuji.**
 
-## Gas nyata (anvil, transaksi terpisah)
+## Gas: ukur dengan transaksi terpisah
 
-| Transaksi | Gas |
-| --- | ---: |
-| transfer ke holder **baru** | 52.349 |
-| transfer ke holder **lama** | 35.249 |
-| **Selisih** | **17.100** = SSTORE nol→bukan nol vs ubah nilai ([EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md)) |
-| approve (slot baru) | 46.710 |
+- Transfer ke holder **baru** lebih mahal dari transfer ke holder **lama**. Selisihnya **17.100** =
+  SSTORE nol→bukan nol vs ubah nilai ([EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md)).
+- `approve` pertama kali juga membuat slot baru.
+- `transferFrom` dengan allowance terbatas lebih mahal dari allowance unlimited, karena allowance
+  terbatas harus ditulis ulang.
 
-Angka gas **di dalam** satu test Foundry menyesatkan: semua langkah berjalan di satu transaksi,
-slot yang sudah disentuh jadi "warm". Contoh: "holder lama" di test = 5.272 gas, di anvil 35.249.
-Untuk angka gas nyata, ukur dengan transaksi terpisah.
-
-`transferFrom` dengan allowance terbatas vs unlimited (dalam test, relatif): 33.284 vs 27.981.
+**Jebakan:** angka gas **di dalam** satu test Foundry menyesatkan. Semua langkah berjalan di satu
+transaksi, jadi slot yang sudah disentuh menjadi "warm" dan jauh lebih murah. Untuk angka gas
+nyata, ukur dengan transaksi terpisah (misalnya di `anvil`).
 
 ## Latihan: `burn`
 
@@ -101,14 +100,23 @@ Untuk angka gas nyata, ukur dengan transaksi terpisah.
 cd ~/Documents/riset/evm/solidity-basics && forge test --match-contract ExerciseBurnTest -vv
 ```
 
-Test memakai low-level call supaya file tetap ter-compile sebelum `burn` ada. Sudah diverifikasi
-bisa diselesaikan.
+Test memakai low-level call supaya file tetap ter-compile sebelum `burn` ada. Status: ☐ belum
+dikerjakan
 
 ## Bacaan lanjutan
 
 - B20 Token Standard Base (folder `Learning/Base/B20/`): ERC-20 versi Base untuk saham tokenisasi. Selector sama dengan MyToken, ditambah role, pause, policy allowlist/blocklist, multiplier untuk dividen/split, dan factory precompile
 
-## Perintah
+## Coba sendiri
+
+1. Tulis `MyToken` dengan dua mapping di atas, constructor yang me-mint supply awal, dan custom
+   error.
+2. Tulis test per kelompok di tabel "Apa yang perlu diuji", termasuk test manual transfer ke diri
+   sendiri.
+3. Cek selector dan topic dengan `forge inspect`, bandingkan dengan tabel selector di atas.
+4. Deploy ke `anvil`, kirim transfer ke holder baru dan holder lama sebagai transaksi terpisah,
+   lalu bandingkan `gasUsed`.
+5. Baca semua event `Transfer` dengan `cast logs`.
 
 ```bash
 forge inspect MyToken methodIdentifiers      # selector semua fungsi

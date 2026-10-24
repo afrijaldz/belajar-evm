@@ -1,12 +1,14 @@
 ---
 title: EVM 01.11 - RPC eth
 tags: [learning, evm, rpc]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # RPC eth
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.10 - Format Alamat 0x](EVM%2001.10%20-%20Format%20Alamat%200x.md) · [EVM 01.12 - Native Token](EVM%2001.12%20-%20Native%20Token.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.11 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.11%20-%20Hasil%20Praktik.md).
 
 Aplikasi (wallet, `cast`, ethers/viem, script) tidak menyentuh blockchain langsung. Ia
 bertanya ke sebuah **node** lewat **RPC (Remote Procedure Call)**: kirim HTTP POST berisi
@@ -32,17 +34,12 @@ dan format jawaban yang sama**. Akibatnya semua tooling Ethereum langsung jalan 
 cukup dengan mengganti URL RPC. Nama `eth_` tetap dipakai walaupun native token-nya bukan
 ETH: `eth_getBalance` di BSC mengembalikan saldo **BNB**.
 
-Bukti (2026-10-03), request yang sama persis dikirim ke tiga node:
+Request yang sama persis bisa dikirim ke node Ethereum dan node BSC. Keduanya menjawab dengan
+format yang sama; yang berbeda cuma isinya. `eth_chainId` di Ethereum mengembalikan `0x1`
+(= 1), di BSC `0x38` (= 56).
 
-| Request | Ethereum (`ethereum-rpc.publicnode.com`) | BSC (`bsc-rpc.publicnode.com`) | Solana (`api.mainnet-beta.solana.com`) |
-| --- | --- | --- | --- |
-| `eth_chainId` | `0x1` (= 1) | `0x38` (= 56) | error `-32601 Method not found` |
-| `eth_getBalance` `0xdead` | 12.640,64 ETH | 16.498.949,12 BNB | — |
-
-Solana juga memakai JSON-RPC, tapi daftar method-nya sendiri (`getSlot`, `getBalance`,
-`getTokenSupply`, …), jadi tooling EVM tidak bisa dipakai di sana. Angka saldo dikembalikan
-dalam hex dan satuan terkecil (wei), jadi perlu dikonversi:
-`cast to-dec 0x2ad402176762ad2d59e | cast from-wei` → `12640.64…`.
+Angka saldo dikembalikan dalam hex dan satuan terkecil (wei), jadi perlu dikonversi:
+`cast to-dec <hex> | cast from-wei`.
 
 ## Daftar method RPC
 
@@ -82,14 +79,29 @@ menandatangani sendiri lalu memakai `eth_sendRawTransaction`.
 | `engine_` | komunikasi execution client ↔ consensus client | **tidak** untuk aplikasi; hanya di port khusus dengan JWT |
 | `anvil_` / `hardhat_` / `evm_` | `anvil_impersonateAccount`, `anvil_setBalance`, `anvil_setStorageAt`, `evm_mine`, `evm_snapshot` | hanya node dev lokal (dipakai di [EVM 05 - Fork dan Foundry](../EVM%2005%20-%20Fork%20dan%20Foundry.md)) |
 
-Bukti (2026-10-03), dicoba ke `ethereum-rpc.publicnode.com` (client `Geth/v1.17.1`):
-`rpc_modules` → `debug, eth, net, rpc, txpool, …`; semua method `eth_` baca di atas
-menjawab; `eth_accounts` → `[]`; `eth_sendTransaction` → `unknown account`;
-`txpool_status` → pending `0x10a87` (68.231 tx); `debug_traceCall` → method tidak ada;
-`trace_block` → "Archive requests require a personal token"; `engine_exchangeCapabilities`
-→ `Method not found`.
+Di RPC publik, method `eth_` untuk membaca data menjawab normal, tapi namespace lain sering
+dibatasi: `debug_` bisa tidak tersedia sama sekali, `trace_` bisa meminta token khusus untuk
+data arsip, dan `engine_` tidak terbuka. Method `rpc_modules` menampilkan namespace yang diaktifkan
+sebuah node.
 
 Daftar lengkap dan format tiap method: https://ethereum.github.io/execution-apis/
+
+## Coba sendiri
+
+1. Kirim `eth_chainId` ke node Ethereum dan node BSC, lalu bandingkan.
+2. Baca saldo `0x…dEaD` di kedua chain. Di BSC hasilnya dalam BNB.
+3. Lihat namespace yang diaktifkan node dengan `rpc_modules`.
+4. Coba `eth_accounts` ke RPC publik. Hasilnya `[]`, karena node publik tidak memegang kunci.
+
+```bash
+curl -s -X POST https://ethereum-rpc.publicnode.com -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+cast chain-id --rpc-url https://bsc-rpc.publicnode.com
+cast balance 0x000000000000000000000000000000000000dEaD --ether --rpc-url <rpc>
+cast to-dec <hex> | cast from-wei                  # hex wei → desimal ether
+cast rpc rpc_modules --rpc-url <rpc>
+cast rpc eth_accounts --rpc-url <rpc>
+```
 
 ---
 

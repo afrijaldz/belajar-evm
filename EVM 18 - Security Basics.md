@@ -1,53 +1,47 @@
 ---
 title: EVM 18 - Security Basics
 tags: [learning, evm, security, oracle, flash-loan, audit]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # Security Basics
 
-Serangan oracle dengan flash
-loan Morpho Blue asli di fork Ethereum (blok ~26.046.522), perbaikannya dengan TWAP, jebakan `tx.origin`,
-dan checklist auditor dari seluruh sesi.
+Sesi 18 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md) — **penutup Fase 3**. Di sesi ini kamu menyerang oracle harga dengan
+flash loan sungguhan di fork Ethereum, memperbaikinya dengan TWAP, mengenali jebakan `tx.origin`, dan
+menyusun checklist auditor dari seluruh sesi. Lanjutan dari [EVM 17 - Proxy dan Upgrade](EVM%2017%20-%20Proxy%20dan%20Upgrade.md).
 
-Project: `~/Documents/riset/evm/security` — `src/Lending.sol` (`SpotPriceSource`, `TwapPriceSource`,
-`Lender`), `src/Attacker.sol`, `src/TxOrigin.sol`, `test/Oracle.t.sol`, `test/TxOrigin.t.sol`.
-
-```bash
-cd ~/Documents/riset/evm/security
-forge test --match-contract OracleTest --fork-url https://eth.drpc.org --fork-block-number $(cast block-number --rpc-url https://ethereum-rpc.publicnode.com) -vv
-forge test --match-contract TxOriginTest -vv
-```
+Hasil percobaan untuk materi ini ada di [EVM 18 - Hasil Praktik](Hasil%20Praktik/EVM%2018%20-%20Hasil%20Praktik.md).
 
 ## Manipulasi oracle dengan flash loan
 
-Setup: GOV + pool Uniswap v2 (1.000.000 GOV + 100 ETH, 1 GOV = 100 micro-ETH). `Lender` memegang 200 WETH,
-meminjamkan sampai 50% nilai jaminan GOV.
+Setup: token GOV + pool Uniswap v2 GOV/ETH. `Lender` memegang WETH dan meminjamkan sampai 50% nilai jaminan
+GOV. Harga GOV diambil dari oracle.
 
 Serangan dalam **satu transaksi** (`OracleAttacker`):
 
-1. Flash loan **1.000 WETH** dari Morpho Blue `0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb` (fee 0; Morpho
-   memegang 13.272 WETH).
-2. Pompa: beli GOV dengan 1.000 WETH → harga spot **100 → 12.066 micro-ETH (×121)**.
-3. Setor 40.000 GOV (~4 ETH di harga wajar) sebagai jaminan, pinjam semua WETH.
-4. Buang GOV hasil pompa kembali ke pool → dapat **~999,45 WETH**.
-5. Morpho menarik 1.000 WETH kembali.
+1. Flash loan WETH dalam jumlah besar dari Morpho Blue `0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb` (fee 0).
+2. Pompa: beli GOV dengan WETH pinjaman → harga spot di pool naik berlipat-lipat.
+3. Setor sedikit GOV sebagai jaminan. Di harga yang dipompa, jaminan kecil itu terlihat sangat berharga,
+   jadi penyerang bisa meminjam semua WETH lender.
+4. Buang GOV hasil pompa kembali ke pool → WETH pinjaman hampir seluruhnya kembali.
+5. Morpho menarik kembali WETH yang dipinjamkan.
 
-| | Oracle **spot** (`getReserves`) | Oracle **TWAP** 1 jam |
-| --- | ---: | ---: |
-| Harga yang dipakai saat serangan | ×121 | wajar (99 micro-ETH) |
-| WETH lender tersisa | **0 / 200** | **198 / 200** (hanya pinjaman wajar 2 ETH) |
-| Penyerang | **+199 ETH** | terima 1,45 ETH, tinggalkan jaminan 4 ETH → **−2,5 ETH** |
+| | Oracle **spot** (`getReserves`) | Oracle **TWAP** |
+| --- | --- | --- |
+| Harga yang dipakai saat serangan | harga yang dipompa | harga wajar |
+| Lender | **terkuras habis** | hanya memberi pinjaman wajar yang tertutup jaminan |
+| Penyerang | untung sebesar isi lender | rugi (jaminan lebih mahal dari pinjaman yang ia terima) |
 
-### Temuan penting
+### Hal penting
 
-- **Memanipulasi spot di pool dangkal nyaris gratis.** Pompa lalu buang 1.000 ETH cuma rugi ~0,55 ETH
-  (fee dua arah); sebagian besar price impact kembali saat dump. Biaya manipulasi = fee, bukan ukuran
-  modal — dan modalnya dipinjam gratis.
+- **Memanipulasi spot di pool dangkal nyaris gratis.** Pompa lalu buang hanya rugi fee dua arah; sebagian
+  besar price impact kembali saat dump. Biaya manipulasi = fee, bukan ukuran modal — dan modalnya dipinjam
+  gratis.
 - **TWAP menghitung harga × detik harga itu bertahan.** Harga yang dipompa dan dibuang dalam satu transaksi
-  bertahan **0 detik**. Bahkan `update()` dipanggil tepat setelah pompa: TWAP tetap 99, spot 12.066.
-- Koreksi asumsi: serangan ke lender TWAP **tidak revert** — biaya round-trip kecil tertutup pinjaman
-  wajar. Yang benar diuji: lender tidak kehilangan lebih dari batas wajar, penyerang berakhir rugi.
+  bertahan **0 detik**. Bahkan kalau `update()` dipanggil tepat setelah pompa, TWAP tetap di harga wajar
+  walaupun spot sudah melonjak.
+- Serangan ke lender TWAP **tidak harus revert** — biaya round-trip kecil bisa tertutup pinjaman wajar. Yang
+  perlu diuji: lender tidak kehilangan lebih dari batas wajar, dan penyerang berakhir rugi.
 
 ### Cara TWAP Uniswap v2 bekerja
 
@@ -68,9 +62,12 @@ blok.
 
 ## Access control: `tx.origin`
 
-| Dompet | Pemilik memanggil `FakeAirdrop.claim()` |
+`tx.origin` adalah EOA yang memulai transaksi; `msg.sender` adalah pemanggil langsung. Misalkan pemilik
+dompet tertipu memanggil `FakeAirdrop.claim()`, lalu kontrak airdrop itu memanggil dompetnya:
+
+| Dompet | Akibat |
 | --- | --- |
-| `require(tx.origin == owner)` | **terkuras 10 ETH** — di panggilan bersarang `tx.origin` tetap pemilik |
+| `require(tx.origin == owner)` | **dompet terkuras** — di panggilan bersarang `tx.origin` tetap pemilik |
 | `require(msg.sender == owner)` | revert `not owner` — `msg.sender` = kontrak airdrop |
 
 Jangan pernah pakai `tx.origin` untuk otorisasi.
@@ -98,3 +95,19 @@ Jangan pernah pakai `tx.origin` untuk otorisasi.
 Pola yang berulang di hampir semua bug: **kontrak mempercayai sesuatu yang bisa dikendalikan pihak lain**
 — harga spot, `amount` yang diminta, return value token, `tx.origin`, urutan storage, atau keeper.
 Pertanyaan pertama auditor selalu: *angka ini datang dari mana, dan siapa yang bisa menggesernya?*
+
+## Coba sendiri
+
+1. Fork Ethereum. Buat pool Uniswap v2 **1.000.000 GOV + 100 ETH** (1 GOV = 100 micro-ETH) dan `Lender` berisi
+   **200 WETH**.
+2. Tulis `OracleAttacker`: flash loan **1.000 WETH** dari Morpho Blue, pompa, setor **40.000 GOV** sebagai
+   jaminan, pinjam semua WETH, buang GOV, kembalikan pinjaman.
+3. Jalankan dengan `SpotPriceSource`, lalu dengan `TwapPriceSource` (jendela 1 jam). Bandingkan sisa WETH
+   lender dan untung/rugi penyerang.
+4. Tulis dompet `tx.origin` dan dompet `msg.sender` berisi 10 ETH, lalu panggil `FakeAirdrop.claim()` sebagai
+   pemilik.
+
+```bash
+forge test --match-contract OracleTest --fork-url https://eth.drpc.org --fork-block-number $(cast block-number --rpc-url https://ethereum-rpc.publicnode.com) -vv
+forge test --match-contract TxOriginTest -vv
+```

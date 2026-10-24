@@ -1,12 +1,14 @@
 ---
 title: EVM 01.07 - Program Counter
 tags: [learning, evm, pc]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Program Counter
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.06 - Storage](EVM%2001.06%20-%20Storage.md) · [EVM 01.08 - Gas](EVM%2001.08%20-%20Gas.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.07 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.07%20-%20Hasil%20Praktik.md).
 
 Angka yang menunjuk **byte ke berapa di code yang sedang
 dijalankan**, seperti jari yang menelusuri baris resep. Mulai dari 0. Setelah satu opcode
@@ -33,8 +35,8 @@ byte: 60 03   5b    60 01   90    03   80    60 02   57     00
                  └──── kalau nilai ≠ 0, PC kembali ke 2 ┘
 ```
 
-Jejak nyata dari `cast run <tx> -t` (anvil, 2026-10-03). Stack ditulis **sebelum** opcode
-dijalankan, elemen teratas di kanan:
+Jejak eksekusinya, seperti yang ditampilkan `cast run <tx> -t`. Stack ditulis **sebelum**
+opcode dijalankan, elemen teratas di kanan:
 
 | PC | Opcode | Stack | Catatan |
 | ---: | --- | --- | --- |
@@ -49,9 +51,21 @@ dijalankan, elemen teratas di kanan:
 | 11 | STOP | `[0]` | selesai, gas eksekusi 81 |
 
 Lompatan ilegal, code `0x600456605b00` (`PUSH1 4 · JUMP · PUSH1 0x5b · STOP`): byte di PC 4
-memang `0x5b`, tapi itu **data** milik `PUSH1` di PC 3, bukan opcode `JUMPDEST`. Hasil:
-`InvalidJump`, status transaksi 0, dan **seluruh gas limit (100.000) habis**, karena kegagalan
-seperti ini (beda dengan `REVERT`) memakan semua gas yang diberikan.
+memang `0x5b`, tapi itu **data** milik `PUSH1` di PC 3, bukan opcode `JUMPDEST`. Hasilnya
+`InvalidJump`, status transaksi 0, dan **seluruh gas limit habis**, karena kegagalan seperti ini
+(beda dengan `REVERT`) memakan semua gas yang diberikan.
+
+## Coba sendiri
+
+1. Deploy code loop `0x60035b600190038060025700` sebagai kontrak di `anvil`, panggil, lalu
+   lihat jejaknya dengan `cast run <tx> -t`. Cocokkan dengan tabel di atas.
+2. Lakukan hal yang sama dengan code lompatan ilegal `0x600456605b00`, lalu cek status dan gas
+   used di receipt.
+
+```bash
+cast run <tx> -t          # trace per opcode: PC, opcode, stack, sisa gas
+cast receipt <tx>         # status + gasUsed
+```
 
 ---
 

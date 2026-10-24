@@ -1,15 +1,16 @@
 ---
 title: EVM 22 - Monitoring
 tags: [learning, evm, monitoring, events, alert, uni]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # Monitoring
 
-Monitor event + alert untuk `Vault` diuji di `anvil`
-dengan eksploit dan reorg simulasi, lalu pola yang sama dipakai di mainnet untuk laju burn UNI.
+Sesi 22 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md). Di sesi ini kamu menulis monitor event + alert untuk `Vault`, mengujinya di
+`anvil` dengan eksploit dan reorg simulasi, lalu memakai pola yang sama di mainnet untuk mengukur laju burn UNI.
+Lanjutan dari [EVM 21 - Deploy ke Testnet dan Verifikasi](EVM%2021%20-%20Deploy%20ke%20Testnet%20dan%20Verifikasi.md); sesi ini tidak butuh deploy sungguhan.
 
-Kode: `~/Documents/riset/evm/monitor/` — `monitor.py` (Vault), `uni_burn_rate.py` (mainnet).
+Hasil percobaan untuk materi ini ada di [EVM 22 - Hasil Praktik](Hasil%20Praktik/EVM%2022%20-%20Hasil%20Praktik.md).
 
 ## Monitor `Vault`
 
@@ -19,68 +20,65 @@ Setiap polling:
    ([EVM 11 - Events dan Indexing](EVM%2011%20-%20Events%20dan%20Indexing.md)).
 2. `eth_getLogs` untuk `Deposited` / `Withdrawn` sampai `head − confirmations`.
 3. Alert **penarikan besar** (≥ ambang).
-4. **Solvency on-chain**: saldo nyata vault vs `totalDeposits` per aset — hanya mungkin karena
-   `totalDeposits` dipertahankan di [EVM 20 - Gas Optimization](EVM%2020%20-%20Gas%20Optimization.md).
+4. **Solvency on-chain**: saldo nyata vault vs `totalDeposits` per aset — hanya mungkin karena kontrak
+   menyimpan `totalDeposits` (trade-off-nya di [EVM 20 - Gas Optimization](EVM%2020%20-%20Gas%20Optimization.md)).
 
 ```bash
 python3 monitor.py <rpc> <vault> <aset,...> --start <blok> --confirmations N --large-withdraw <wei> --poll 1 --max-polls 60
 ```
 
-### Uji di anvil
+### Menguji monitor di anvil
 
-| Kejadian | Output monitor |
-| --- | --- |
-| Deposit / withdraw normal | tercatat per blok |
-| Withdraw 120 token | `ALERT large withdrawal 120.0000 by 0x7099… in block 8` |
-| Saldo token vault dipotong lewat `anvil_setStorageAt` (simulasi eksploit) | `ALERT INSOLVENT asset 0xe7f1… holds 30.0000 but owes 70.0000` |
-| `anvil_reorg` 2 blok, diganti deposit 3 ETH akun #5 | `ALERT reorg at block 10`, `… block 9`, lalu blok 9 baru dibaca |
+`anvil` punya cheat RPC untuk mensimulasikan kejadian buruk tanpa eksploit sungguhan:
 
-Setelah reorg, alert INSOLVENT hilang: manipulasi storage ada di blok yang dibatalkan.
+| Kejadian | Cara memicu | Yang harus dilaporkan monitor |
+| --- | --- | --- |
+| Deposit / withdraw normal | transaksi biasa | tercatat per blok |
+| Penarikan besar | withdraw di atas ambang | `ALERT large withdrawal …` |
+| Eksploit (saldo vault hilang) | potong saldo token vault lewat `anvil_setStorageAt` | `ALERT INSOLVENT asset … holds X but owes Y` |
+| Reorg | `anvil_reorg` beberapa blok, ganti dengan transaksi lain | `ALERT reorg at block …`, lalu blok baru dibaca ulang |
 
-### Kelemahan yang terlihat (dan perbaikannya)
+Setelah reorg membatalkan blok yang berisi manipulasi storage, alert INSOLVENT harus hilang.
 
-- Deposit di blok 10 **sudah terlanjur dilaporkan** sebelum blok itu dibatalkan → pakai `--confirmations N`.
-- Alert INSOLVENT **berulang tiap polling** → monitor produksi butuh deduplikasi alert.
+### Kelemahan monitor sederhana (dan perbaikannya)
+
+- Event di blok yang belum final bisa **terlanjur dilaporkan** sebelum blok itu dibatalkan reorg → pakai
+  `--confirmations N`.
+- Alert yang sama **berulang tiap polling** → monitor produksi butuh deduplikasi alert.
 - Output cuma `print` → produksi: kirim ke Telegram/Discord/PagerDuty, simpan state ke disk.
 
 ### Jebakan: hash dari ingatan
 
-Topic `Deposited` dan selector `totalDeposits` yang ditulis dari ingatan **salah** (`0x2da4…`, `0xccd6e1e5`;
-benar `0x8752…68a7`, `0xe9403256`). Dengan hash salah, monitor **diam** — tidak ada event cocok, tidak ada
-error. Semua hash sekarang dari `cast keccak` / `cast sig`. Pola kesalahan sama dengan alamat dan key di
-Sesi 11.
+Topic event dan selector fungsi yang ditulis dari ingatan sering **salah**. Dengan hash salah, monitor **diam**
+— tidak ada event cocok, tidak ada error. Selalu hitung dengan `cast keccak` / `cast sig`. Pola kesalahan ini
+sama dengan alamat dan key di [EVM 11 - Events dan Indexing](EVM%2011%20-%20Events%20dan%20Indexing.md).
+
+```bash
+cast keccak 'Deposited(address,address,uint256)'   # topic0 event (sesuaikan dengan signature event-mu)
+cast sig 'totalDeposits(address)'                   # selector fungsi
+```
 
 ## Mainnet: laju burn UNI
 
-`uni_burn_rate.py`: hitung event `Released` Firepit mainnet di N blok terakhir.
+Pola yang sama bisa dipakai di mainnet: hitung event `Released` Firepit mainnet di N blok terakhir, lalu ubah
+ke UNI per jam (setiap `Released` membakar `threshold` UNI, lihat [EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md)).
 
-| Jendela | Released | UNI |
-| --- | ---: | ---: |
-| 1.800 blok (6,07 jam) | **1** (nonce 1.360) | 4.000 → **659 UNI/jam** |
+Tapi `Released` di mainnet **bukan satu-satunya jalur burn**. Sejak fee switch diperluas ke L2 (Maret 2026),
+tiap L2 punya Firepit sendiri (threshold **2.000 UNI**). UNI yang dibakar di L2 **di-bridge ke `0xdead` di L1**
+lewat hook `_afterRelease` — yang di source Firepit dikomentari *"e.g. bridge calls"*. Jadi transfer UNI ke
+`0xdead` di Ethereum datang dari banyak pengirim: Firepit mainnet, dan kontrak bridge tiap L2
+(`L1StandardBridge` untuk Base/Optimism, `L1ERC20Gateway` untuk Arbitrum, `NttManager` untuk Wormhole NTT).
+Withdrawal rollup OP (Base/Optimism) final ~7 hari → burn L2 tiba **terlambat dan bergelombang**.
 
-Tidak cocok dengan +68.000 UNI "dalam beberapa jam" di [EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md). Semua
-transfer UNI → `0xdead` sejak 2026-09-23 06:00 UTC (Blockscout):
+**Pelajaran monitoring:** pantau **hasil akhir** (Transfer ke `0xdead`), bukan satu jalur mekanisme. Monitor
+yang cuma melihat `Released` di mainnet bisa melewatkan sebagian besar burn.
 
-| Pengirim | Kontrak | Asal | UNI |
-| --- | --- | --- | ---: |
-| `0x85001cc4867c5e1c22da4b79bb8852b9e2a06da0` | `L1ERC20Gateway` (proxy) | gateway gaya Arbitrum, chain belum diidentifikasi | 60.000 (30 tx) |
-| `0x3154cf16ccdb4c6d922629664174b904d80f2c35` | `L1StandardBridge` | **Base** | 20.000 |
-| `0xc6208ce00b3f88c6555833ab9bbc943717dfd941` | kontrak tanpa nama | belum diidentifikasi | 12.000 |
-| `0xa3a7b6f88361f48403514059f1f16c8e78d60eec` | `L1ERC20Gateway` | **Arbitrum** | 8.000 |
-| `0x6569925aac77d6b8bb085f31f9828ff80d5a0c44` | `NttManager` | Wormhole NTT | 6.000 |
-| `0x9b715efb4ebdb14862d079a841ba4983ffd69236` | bot Sesi 6 | Firepit **Ethereum** | 4.000 |
-| `0x99c9fc46f92e8a1c0dec1b1747d010903e884be1` | `L1StandardBridge` | **Optimism** | 2.000 |
-| **Total** | 51 transfer | | **112.000** |
+## Coba sendiri
 
-**Penjelasan:** sejak fee switch diperluas ke L2 (Maret 2026), tiap L2 punya Firepit sendiri (threshold
-**2.000 UNI**, paket 2.000 di atas). UNI yang dibakar di L2 **di-bridge ke `0xdead` di L1** lewat hook
-`_afterRelease` — yang di source Firepit dikomentari *"e.g. bridge calls"*. Withdrawal rollup OP
-(Base/Optimism) final ~7 hari → burn L2 tiba **terlambat dan bergelombang**.
-
-Firepit mainnet cuma **~4%** burn dalam sampel ini.
-
-**Pelajaran monitoring:** pantau **hasil akhir** (Transfer ke `0xdead`), bukan satu jalur mekanisme.
-Monitor yang cuma melihat `Released` di mainnet melewatkan ~96% burn.
-
-Koreksi sudah ditambahkan ke [EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md) dan
-UNI Diperiksa dengan Saringan Lima Chain.
+1. Jalankan `anvil`, deploy `Vault`, lalu jalankan `monitor.py` dengan `--large-withdraw` kecil.
+2. Lakukan deposit dan withdraw besar; cek alert.
+3. Potong saldo token vault dengan `anvil_setStorageAt`; cek alert INSOLVENT.
+4. Panggil `anvil_reorg` 2 blok dan ganti dengan deposit dari akun lain; cek alert reorg dan apakah alert
+   INSOLVENT hilang.
+5. Jalankan penghitung `Released` di mainnet untuk ±1.800 blok, lalu bandingkan dengan semua transfer UNI →
+   `0xdead` di periode yang sama (mis. lewat Blockscout). Kelompokkan per pengirim.

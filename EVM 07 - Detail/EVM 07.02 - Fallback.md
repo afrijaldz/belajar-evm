@@ -1,12 +1,14 @@
 ---
 title: EVM 07.02 - Fallback
 tags: [learning, evm, solidity, fallback, proxy]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # fallback()
 
 Bagian dari [EVM 07 - Dasar Solidity](../EVM%2007%20-%20Dasar%20Solidity.md) · ← [EVM 07.01 - Payable dan receive](EVM%2007.01%20-%20Payable%20dan%20receive.md)
+
+Hasil percobaan untuk materi ini ada di [EVM 07.02 - Hasil Praktik](../Hasil%20Praktik/EVM%2007.02%20-%20Hasil%20Praktik.md).
 
 **`fallback()` adalah fungsi cadangan kontrak.** Fungsi ini berjalan kalau tidak ada fungsi
 lain yang cocok dengan panggilan. Tanpa `fallback()`, panggilan seperti itu langsung revert.
@@ -50,28 +52,20 @@ Aturannya:
 Pada bentuk 2, output **tidak di-ABI-encode**. Bytes yang dikembalikan langsung menjadi
 return data. Ini yang membuat proxy bisa meneruskan return value apa pun tanpa tahu tipenya.
 
-## Bukti test Foundry
+## Apa yang dilihat `fallback()`
 
-File: `~/Documents/riset/evm/solidity-basics/src/Fallback.sol` dan `test/Fallback.t.sol`.
-
-```bash
-cd ~/Documents/riset/evm/solidity-basics && forge test --match-path test/Fallback.t.sol -vv
-```
-
-Hasil: **6 passed, 0 failed**.
-
-| Test | Hasil |
+| Panggilan | Yang terjadi |
 | --- | --- |
-| Kirim 1 ETH tanpa calldata ke kontrak yang hanya punya `fallback() payable` | `fallback()` jalan, `msg.data.length` 0, `msg.value` 1 ETH |
-| Panggil dengan calldata 2 byte (`0xabcd`) | `fallback()` jalan, `msg.data.length` **2** |
-| Panggil `transfer(address,uint256)` ke kontrak yang tidak punya fungsi itu | `fallback()` jalan dan melihat calldata utuh, **68 byte** (4 selector + 32 + 32) |
-| `EchoFallback` (bentuk 2) dipanggil dengan `0xdeadbeef01` | return data persis `0xdeadbeef01`, tanpa ABI encoding |
-| `StrictFallback` dipanggil dengan `withdraw()` | revert `UnknownCall(0x3ccfd60b)` (selector `withdraw()`); fungsi `known()` tetap jalan normal |
-| `MiniProxy` dipanggil `increment()` 2 kali | `number` di proxy = **2**, di kontrak logika tetap **0**; slot 0 proxy = 2 |
+| ETH tanpa calldata ke kontrak yang hanya punya `fallback() payable` | `fallback()` jalan, `msg.data.length` 0, `msg.value` terisi |
+| Calldata pendek (mis. 2 byte `0xabcd`) | `fallback()` jalan, `msg.data.length` = 2 |
+| Fungsi yang tidak ada, mis. `transfer(address,uint256)` | `fallback()` jalan dan melihat calldata utuh, 68 byte (4 selector + 32 + 32) |
+| Bentuk 2 yang mengembalikan input apa adanya (mis. `0xdeadbeef01`) | return data persis sama, tanpa ABI encoding |
+| `fallback()` yang revert dengan custom error, dipanggil `withdraw()` | revert `UnknownCall(0x3ccfd60b)` (selector `withdraw()`); fungsi lain yang ada tetap jalan normal |
+| Proxy dengan `fallback()` + `delegatecall`, dipanggil `increment()` | yang berubah storage proxy, storage kontrak logika tidak berubah |
 
-Hasil test di [EVM 07.01 - Payable dan receive](EVM%2007.01%20-%20Payable%20dan%20receive.md) juga berlaku: `fallback()` non-payable
-menolak semua panggilan yang membawa ETH, dan calldata 1 byte + ETH masuk ke `fallback()`,
-bukan ke `receive()`.
+Aturan di [EVM 07.01 - Payable dan receive](EVM%2007.01%20-%20Payable%20dan%20receive.md) juga berlaku: `fallback()` non-payable menolak
+semua panggilan yang membawa ETH, dan calldata 1 byte + ETH masuk ke `fallback()`, bukan ke
+`receive()`.
 
 Compiler memberi peringatan untuk kontrak yang punya `fallback() payable` tanpa `receive()`:
 
@@ -90,8 +84,11 @@ Dispatcher di awal bytecode membandingkan selector satu per satu (lihat
 
 | Kontrak | Kalau tidak ada selector yang cocok |
 | --- | --- |
-| Tanpa `fallback()` (`OnlyPayableFunction`) | lompat ke `PUSH0 PUSH0 REVERT` |
-| Dengan `fallback()` (`FallbackOnly`) | lompat ke `0x37`, yaitu badan `fallback()` (langsung `SLOAD` untuk `hits++`) |
+| Tanpa `fallback()` | lompat ke `PUSH0 PUSH0 REVERT` |
+| Dengan `fallback()` | lompat ke badan `fallback()` |
+
+Contoh: di kontrak kecil yang `fallback()`-nya hanya `hits++`, tujuan lompatan cadangan itu
+langsung berisi `SLOAD` untuk membaca `hits`.
 
 Calldata yang lebih pendek dari 4 byte juga lompat ke tempat yang sama
 (`CALLDATASIZE … LT … JUMPI` di awal bytecode). Jadi `fallback()` hanyalah tujuan lompatan
@@ -113,23 +110,16 @@ user ──"increment()"──► MiniProxy
                        CounterLogic.increment()  ── menulis slot 0 MILIK PROXY
 ```
 
-Contoh nyata di Ethereum mainnet (2026-10-03), USDC `0xA0b8…eB48`:
-
-| Cek | Hasil |
-| --- | --- |
-| Ukuran bytecode proxy | 2.186 byte |
-| Selector `symbol()` `0x95d89b41` ada di bytecode proxy? | **tidak** |
-| `cast call <USDC> "symbol()(string)"` | `"USDC"` |
-| Selector `upgradeTo`, `implementation`, `admin` di bytecode proxy | ada (fungsi milik proxy sendiri) |
-| Slot ZeppelinOS implementation `0x7050…f8c3` | `0x43506849d7c04f9138d1a2050bbf3a0c054402dd` |
-
-Fungsi `symbol()` tidak ada di proxy, tetapi panggilan tetap berhasil. Panggilan itu masuk ke
-`fallback()` proxy dan diteruskan ke kontrak logika `0x4350…02dd`.
+Contoh nyata: **USDC** di Ethereum mainnet adalah proxy. Bytecode proxy-nya kecil dan hanya
+berisi fungsi milik proxy sendiri (`upgradeTo`, `implementation`, `admin`). Selector `symbol()`
+(`0x95d89b41`) tidak ada di bytecode proxy, tetapi `cast call <USDC> "symbol()(string)"` tetap
+mengembalikan `"USDC"`. Panggilan itu masuk ke `fallback()` proxy dan diteruskan ke kontrak
+logika, yang alamatnya disimpan di slot implementation gaya ZeppelinOS milik proxy.
 
 ## Kegunaan lain
 
-- **Menolak dengan pesan yang jelas.** `StrictFallback` revert dengan `UnknownCall(selector)`,
-  bukan revert kosong. Ini memudahkan debugging.
+- **Menolak dengan pesan yang jelas.** `fallback()` bisa revert dengan
+  `UnknownCall(selector)`, bukan revert kosong. Ini memudahkan debugging.
 - **Menerima ETH dan data sekaligus.** `fallback() payable` menerima ETH yang dikirim bersama
   calldata yang tidak dikenal.
 - **Kontrak yang membaca calldata sendiri.** Beberapa kontrak MEV dan router hemat gas
@@ -147,6 +137,22 @@ Fungsi `symbol()` tidak ada di proxy, tetapi panggilan tetap berhasil. Panggilan
   fungsi di kontrak logika, fungsi proxy yang menang, dan fungsi logika tidak pernah
   terpanggil. Transparent proxy dan UUPS ada untuk menangani masalah ini (lihat
   [EVM 17 - Proxy dan Upgrade](../EVM%2017%20-%20Proxy%20dan%20Upgrade.md)).
+
+## Coba sendiri
+
+1. Tulis kontrak yang hanya punya `fallback() payable`, lalu kirim ETH tanpa calldata dan
+   panggil dengan calldata 2 byte. Cek `msg.data.length` dan `msg.value`.
+2. Tulis `fallback()` bentuk 2 yang mengembalikan input apa adanya, lalu bandingkan return
+   data dengan input.
+3. Tulis `fallback()` yang revert `UnknownCall(bytes4)`, lalu panggil fungsi yang tidak ada.
+4. Buat proxy mini: `fallback(bytes calldata input)` yang `delegatecall` ke kontrak counter.
+   Panggil `increment()` dua kali, lalu bandingkan storage proxy dan kontrak logika.
+5. Cek proxy nyata: cari selector `symbol()` di `cast code <USDC>`, lalu panggil
+   `cast call <USDC> "symbol()(string)"` dan baca slot implementation dengan `cast storage`.
+
+```bash
+forge test --match-path test/Fallback.t.sol -vv
+```
 
 ---
 

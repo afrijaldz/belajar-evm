@@ -1,12 +1,14 @@
 ---
 title: EVM 01.02 - Opcode
 tags: [learning, evm, opcode]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Opcode
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.01 - Mesin EVM](EVM%2001.01%20-%20Mesin%20EVM.md) · [EVM 01.03 - Stack](EVM%2001.03%20-%20Stack.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.02 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.02%20-%20Hasil%20Praktik.md).
 
 Singkatan *operation code*: **satu perintah dasar** untuk EVM, ditulis sebagai
 **satu byte** (nilai `0x00`–`0xff`). Bytecode kontrak hanyalah deretan opcode. Setiap opcode
@@ -44,8 +46,10 @@ Solidity → opcode: compiler menerjemahkan setiap baris jadi banyak opcode. `a 
 `DUP`/`ADD`/pengecekan overflow; memilih fungsi jadi `CALLDATALOAD`, `SHR`, `EQ`, `JUMPI`.
 Daftar lengkap + gas + simulator: https://www.evm.codes/
 
-Bukti (2026-10-03): `cast disassemble $(cast code 0xcA11…CA11)` (Multicall3, Ethereum)
-→ 3.808 byte = 2.160 opcode, 78 jenis berbeda. Awalnya:
+## Contoh: awal bytecode kontrak sungguhan
+
+Bytecode kontrak yang sudah di-deploy bisa diubah kembali jadi daftar opcode dengan
+`cast disassemble`. Contoh awal bytecode Multicall3 (`0xcA11…CA11`) di Ethereum:
 
 ```text
 00: PUSH1 0x80       ┐ siapkan memory (pola awal hampir semua kontrak Solidity)
@@ -61,12 +65,25 @@ Bukti (2026-10-03): `cast disassemble $(cast code 0xcA11…CA11)` (Multicall3, E
 10: PUSH1 0xe0       │
 12: SHR              ┘
 13: DUP1
-14: PUSH4 0x4d2301cc   ← selector getEthBalance(address) (dicek dengan cast sig)
+14: PUSH4 0x4d2301cc   ← selector getEthBalance(address) (bisa dicek dengan cast sig)
 ```
 
-Yang paling sering: `PUSH` 552, `DUP` 396, `SWAP` 190, `JUMPDEST` 151, `POP` 143: sebagian besar
-kerja EVM adalah mengatur stack. Byte tak terdefinisi `0x0c` dijalankan di anvil → status 0,
-gas used 50.000 = seluruh gas limit.
+Kalau opcode di sebuah kontrak dihitung, yang paling sering muncul biasanya `PUSH`, `DUP`,
+`SWAP`, `JUMPDEST`, dan `POP`: sebagian besar kerja EVM adalah mengatur stack.
+
+**Jebakan:** byte tak terdefinisi (misalnya `0x0c`) tidak sekadar revert. Transaksinya gagal
+(status 0) dan **seluruh gas limit** terpakai.
+
+## Coba sendiri
+
+1. Ambil bytecode Multicall3 dan ubah jadi daftar opcode.
+2. Cocokkan selector `PUSH4` di dispatcher dengan `cast sig`.
+3. Hitung opcode mana yang paling sering muncul.
+
+```bash
+cast disassemble $(cast code 0xcA11bde05977b3631167028862bE2a173976CA11 --rpc-url <rpc-ethereum>)
+cast sig 'getEthBalance(address)'    # 0x4d2301cc
+```
 
 ---
 

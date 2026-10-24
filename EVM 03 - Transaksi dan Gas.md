@@ -1,51 +1,53 @@
 ---
 title: EVM 03 - Transaksi dan Gas
 tags: [learning, evm, ethereum, bsc, gas]
-updated: 2026-09-24
+updated: 2026-10-24
 ---
 
 # Transaksi dan Gas EVM
 
-Semua angka hasil observasi langsung di
-`anvil` lokal (Foundry 1.7.1, hardfork `Bpo1`, block gas limit sengaja dikecilkan ke 100.000)
-dan di Ethereum/BSC mainnet.
+Sesi 3 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md), lanjutan dari [EVM 02 - Account Model](EVM%2002%20-%20Account%20Model.md). Di sesi ini kamu
+belajar isi sebuah transaksi, ke mana biaya gas pergi, bagaimana base fee naik-turun, dan
+operasi apa yang paling mahal.
 
-Project praktik: `~/Documents/riset/evm/account-model` (kontrak `Tally` dengan event + revert).
+Hasil percobaan untuk materi ini ada di [EVM 03 - Hasil Praktik](Hasil%20Praktik/EVM%2003%20-%20Hasil%20Praktik.md).
 
-## Transaksi = 119 byte data yang ditandatangani
+## Transaksi = data kecil yang ditandatangani
 
-`cast mktx` membuat dan menandatangani transaksi **tanpa mengirimnya**. Transfer 1 ETH tipe
-EIP-1559 = **119 byte**, byte pertama `0x02` = tipe transaksi.
+Transaksi hanyalah sekumpulan field yang di-encode lalu ditandatangani. `cast mktx` membuat dan
+menandatangani transaksi **tanpa mengirimnya**, jadi kamu bisa melihat bentuk mentahnya. Transfer
+ETH polos tipe EIP-1559 hanya sekitar 119 byte. Byte pertama = tipe transaksi (`0x02` untuk
+EIP-1559).
 
-| Field | Contoh | Arti |
-| --- | --- | --- |
-| `chainId` | 31337 | mencegah replay di chain lain |
-| `nonce` | 0 | urutan transaksi pengirim |
-| `gas` | 21.000 | **batas** gas |
-| `maxFeePerGas` | 3 gwei | harga maksimal per gas |
-| `maxPriorityFeePerGas` | 2 gwei | tip maksimal untuk validator |
-| `to`, `value`, `input` | B, 1 ETH, `0x` | tujuan, jumlah, calldata |
-| `r`, `s`, `yParity` | … | tanda tangan |
+| Field | Arti |
+| --- | --- |
+| `chainId` | mencegah replay di chain lain |
+| `nonce` | urutan transaksi pengirim |
+| `gas` | **batas** gas |
+| `maxFeePerGas` | harga maksimal per gas |
+| `maxPriorityFeePerGas` | tip maksimal untuk validator |
+| `to`, `value`, `input` | tujuan, jumlah, calldata |
+| `r`, `s`, `yParity` | tanda tangan |
 
 **Tidak ada field `from`.** Pengirim dihitung ulang dari tanda tangan — tidak bisa dipalsukan.
 
 ## EIP-1559: ke mana biaya pergi
 
-Transfer di atas, base fee blok 1 gwei, tip 2 gwei:
+Biaya per gas terdiri dari dua bagian: **base fee** (ditetapkan protokol) dan **priority fee**
+(tip). Contoh transfer ETH polos (21.000 gas) dengan base fee 1 gwei dan tip 2 gwei:
 
 | Bagian | Rumus | Jumlah | Ke mana |
 | --- | --- | ---: | --- |
 | Base fee | 1 gwei × 21.000 | 21.000 gwei | **dibakar** |
-| Priority fee | 2 gwei × 21.000 | 42.000 gwei | validator (coinbase; di `anvil` = `0x0`) |
+| Priority fee | 2 gwei × 21.000 | 42.000 gwei | validator (alamat `coinbase` blok) |
 | **Total** | 3 gwei × 21.000 | **63.000 gwei** | |
 
-- **`maxFeePerGas` cuma plafon.** Dengan maxFee 100 gwei dan tip 2 gwei, yang dibayar tetap
-  base + tip = 0,9275 + 2 = **2,9275 gwei**.
+- **`maxFeePerGas` cuma plafon.** Walaupun maxFee dipasang jauh lebih tinggi, yang dibayar tetap
+  base fee + tip.
 - **maxFee di bawah base fee langsung ditolak** (`max fee per gas less than block base fee`),
   tidak masuk blok.
 
-Ini mekanisme burn yang sama dengan di riset tokenomics — burn di level protokol, bukan dari
-kontrak.
+Ini burn di level protokol, bukan dari kontrak: bagian base fee dari setiap transaksi dimusnahkan.
 
 ## Base fee diatur rumus, bukan lelang
 
@@ -53,92 +55,94 @@ kontrak.
 base_baru = base_lama × (1 + 1/8 × (gas_terpakai − target) / target)      target = gasLimit / 2
 ```
 
-| Kondisi blok sebelumnya | Hasil terukur | Prediksi |
-| --- | --- | --- |
-| 21.000 dari target 50.000 | 1 → **0,9275** gwei | 0,9275 ✓ |
-| Kosong (3 blok berturut) | ×**0,875** tiap blok (0,6957 → 0,6087 → 0,5326) | turun maks −12,5% ✓ |
-| 99.000 dari limit 100.000 | ×**1,1225** (466.036.724 → 523.126.222 wei) | 523.126.223 (selisih 1 wei) ✓ |
+- Blok tepat di target → base fee tetap.
+- Blok kosong → base fee turun 12,5% (×0,875). Ini penurunan maksimal per blok.
+- Blok hampir penuh → base fee naik mendekati 12,5% (blok penuh = naik maksimal 12,5%).
+- Hasil hitungan bisa selisih 1 wei karena pembulatan bilangan bulat.
 
 Transaksi yang butuh gas melebihi block gas limit ditolak saat estimasi.
 
 ## Harga calldata: 10 dan 40 gas per byte
 
-| Calldata | gasUsed | Per byte |
-| --- | ---: | ---: |
-| kosong | 21.000 | — |
-| 100 × `0x00` | 22.000 | **10** |
-| 100 × `0xff` | 25.000 | **40** |
+Untuk transaksi yang dominan data (misalnya transaksi yang hanya membawa calldata tanpa
+eksekusi), harganya **10 gas per byte nol** dan **40 gas per byte bukan nol** — bukan 4 dan 16
+seperti di banyak tutorial lama. Penyebabnya **harga minimum EIP-7623** (Pectra): 10 gas per
+"token", byte nol = 1 token, byte bukan nol = 4 token.
 
-Bukan 4 dan 16 seperti di banyak tutorial lama. Untuk transaksi yang dominan data, berlaku
-**harga minimum EIP-7623** (Pectra): 10 gas per "token", byte nol = 1 token, byte bukan nol =
-4 token.
+Artinya byte nol jauh lebih murah daripada byte bukan nol.
 
 ## Storage adalah operasi termahal
 
-`Tally.set(uint256)`, slot yang sama:
+Biaya `SSTORE` bergantung pada nilai lama dan nilai baru di slot itu:
 
-| Operasi | gasUsed | Selisih dari "ubah nilai" |
-| --- | ---: | ---: |
-| **0 → 42** (slot baru) | 43.740 | **+17.100** (20.000 vs 2.900) |
-| 42 → 43 (ubah) | 26.640 | baseline |
-| 43 → 43 (sama) | 23.840 | −2.800 |
-| 43 → 0 (hapus) | 21.828 | −4.812 (**refund 4.800** + 12 gas calldata nol) |
+| Operasi pada satu slot | Biaya `SSTORE` |
+| --- | --- |
+| **0 → bukan nol** (slot baru) | **20.000** |
+| bukan nol → bukan nol lain (ubah) | 2.900 |
+| nilai sama ditulis ulang | lebih murah dari "ubah" |
+| bukan nol → 0 (hapus) | dapat **refund 4.800** |
 
 Membuat satu slot baru (20.000) ≈ satu transfer ETH penuh. Itu sebabnya transfer token ke
 alamat yang belum pernah punya saldo lebih mahal.
 
 ## Gagal tetap bayar
 
-| Kasus | status | gasUsed | Nonce | State |
+| Kasus | status | Gas yang dibayar | Nonce | State |
 | --- | --- | --- | --- | --- |
-| Revert (`add(0)`, `require` gagal) | `false` | 21.875 | naik | tidak berubah |
-| Out of gas (`add(5)`, limit 23.000) | `false` | **23.000 = seluruh limit** | naik | tidak berubah |
+| Revert (mis. `require` gagal) | `false` | gas yang **terpakai** sampai titik revert | naik | tidak berubah |
+| Out of gas | `false` | **seluruh gas limit** | naik | tidak berubah |
 
-- Revert: yang dibayar hanya gas yang **terpakai** sampai titik revert.
+- Revert: yang dibayar hanya gas yang terpakai sampai titik revert.
 - Out of gas: **seluruh gas limit hangus**.
-- Alasan revert bisa dibaca ulang: `cast run <tx>` → `[Revert] amount is zero`.
+- Alasan revert bisa dibaca ulang dengan `cast run <tx>` (contoh output: `[Revert] amount is zero`).
 
 ## Receipt dan log
 
-`add(5)` sukses memancarkan `Added(address indexed by, uint256 amount, uint256 newTotal)`:
+Setiap `emit` di kontrak menghasilkan satu **log** di receipt transaksi. Contoh event
+`Added(address indexed by, uint256 amount, uint256 newTotal)`:
 
 | Bagian log | Isi | Arti |
 | --- | --- | --- |
-| `address` | Tally | kontrak yang memancarkan |
-| `topics[0]` | `0x2a8f5e2f…` | `keccak256("Added(address,uint256,uint256)")` |
-| `topics[1]` | `0x…f39fd6e5…` | parameter `indexed` (`by`) — bisa difilter |
-| `data` | `5`, `5` | parameter non-indexed |
+| `address` | alamat kontrak | kontrak yang memancarkan |
+| `topics[0]` | `keccak256("Added(address,uint256,uint256)")` | identitas event |
+| `topics[1]` | nilai `by`, dipad 32 byte | parameter `indexed` — bisa difilter |
+| `data` | `amount`, `newTotal` | parameter non-indexed |
 
-**Ini yang dipakai di riset tokenomics.** `0xddf252ad…` di filter `eth_getLogs` untuk burn CAKE
-dan UNI = `keccak256("Transfer(address,address,uint256)")`. Filter `[T, null, DEAD]` = "Transfer,
-pengirim siapa saja, penerima `0xdead`". Bisa karena `from` dan `to` bertipe `indexed`.
+**Contoh pemakaian: mencari burn token.** Event ERC-20 `Transfer(address indexed from, address
+indexed to, uint256 value)` punya `topics[0]` = `0xddf252ad…` =
+`keccak256("Transfer(address,address,uint256)")`. Filter `eth_getLogs` dengan topics
+`[T, null, DEAD]` berarti "Transfer, pengirim siapa saja, penerima `0xdead`". Ini bisa karena
+`from` dan `to` bertipe `indexed`.
 
-## Chain nyata (2026-09-24)
+## Ethereum vs BSC
 
-| | Ethereum | BSC |
-| --- | ---: | ---: |
-| Block gas limit | 60.000.000 | 70.000.000 |
-| Terisi | 65,2% | 25,5% |
-| **Base fee** | 0,108 gwei | **0** |
-| `eth_gasPrice` | 0,108 gwei | 0,05 gwei |
-| Transaksi per blok | 234 | 121 (blok ~27x lebih sering: 0,45 detik vs 12 detik) |
+- **Base fee BSC selalu 0.** BSC memakai format transaksi EIP-1559, tapi tidak ada base fee yang
+  dibakar. Burn BNB datang dari mekanisme lain: BEP-95 dan auto-burn kuartalan.
+- Blok BSC jauh lebih sering (sekitar 0,45 detik) dibanding Ethereum (12 detik), jadi jumlah
+  transaksi per blok tidak bisa dibandingkan langsung.
+- Transaksi bertipe `0x0` (legacy) masih dipakai di BSC.
 
-- **Base fee BSC selalu 0.** Format EIP-1559 dipakai, tapi base fee tidak dibakar. Burn BSC
-  datang dari BEP-95 dan auto-burn kuartalan — lihat BNB Diperiksa Ulang 2026-09-24.
-- **Transaksi mint-burn CAKE** `0xb7a7e298…abd11` (CAKE Diperiksa Ulang 2026-09-24):
-  tipe `0x0` (legacy), **2.454.872 gas**, 0,1 gwei, fee **0,000245 BNB (~$0,19)**, 17 log
-  (7× `UpdatePool`, 4× `Transfer`, dll.).
-
-## Jebakan tooling yang ditemui
+## Jebakan
 
 - `cast block <n> gasLimit` salah — yang benar `cast block <n> --field gasLimit`.
 - `jq tonumber` tidak bisa membaca hex (`0x5208`). Pakai Python `int(x, 16)` atau `cast to-dec`.
 - Aritmetika zsh `$(( ))` overflow di atas 2^63 — saldo dalam wei (≈10^22) jadi salah. Pakai Python.
-- Fungsi shell bernama `g` bentrok dengan alias git di zsh.
-- Transaksi revert tidak bisa dikirim lewat `cast send` biasa karena estimasi gas gagal duluan.
-  Pasang `--gas-limit` manual supaya tetap terkirim.
+- Transaksi yang akan revert tidak bisa dikirim lewat `cast send` biasa karena estimasi gas gagal
+  duluan. Pasang `--gas-limit` manual supaya tetap terkirim.
 
-## Perintah
+## Coba sendiri
+
+Jalankan `anvil` dengan block gas limit kecil supaya base fee mudah bergerak, lalu:
+
+1. Buat transaksi dengan `cast mktx`, decode dengan `cast decode-transaction`, kirim dengan
+   `cast publish`.
+2. Bandingkan `gasUsed` dan `effectiveGasPrice` di receipt dengan rumus EIP-1559 di atas.
+3. Tambang blok kosong (`anvil_mine`) beberapa kali, lalu cek `baseFeePerGas` turun 12,5% per blok.
+4. Kirim calldata 100 byte `0x00` dan 100 byte `0xff`, bandingkan `gasUsed`-nya.
+5. Tulis kontrak kecil dengan satu variabel `uint256`, lalu ukur gas untuk 0 → nilai, ubah nilai,
+   nilai sama, dan nilai → 0.
+6. Buat fungsi dengan `require` dan event. Picu revert dan out of gas (dengan `--gas-limit`), lalu
+   baca alasannya dengan `cast run`.
 
 ```bash
 anvil --port 8545 --gas-limit 100000                     # block kecil supaya base fee mudah bergerak

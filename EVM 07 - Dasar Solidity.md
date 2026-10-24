@@ -1,16 +1,18 @@
 ---
 title: EVM 07 - Dasar Solidity
 tags: [learning, evm, solidity, foundry]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Dasar Solidity
 
-Semua konsep dibuktikan
-lewat test Foundry (Solidity ^0.8.24, forge 1.7.1).
+Sesi 7 dari [EVM 00 - Roadmap](EVM%2000%20-%20Roadmap.md) — sesi pertama Fase 2, lanjutan dari
+[EVM 06 - Mekanisme Burn UNI di Fork](EVM%2006%20-%20Mekanisme%20Burn%20UNI%20di%20Fork.md). Di sesi ini kamu belajar dasar Solidity yang paling
+sering menentukan benar-salahnya kontrak: tipe data dan overflow, storage packing, lokasi data,
+visibility, modifier dan custom error, serta cara kontrak menerima ETH. Setiap konsep bisa
+dibuktikan dengan test Foundry (Solidity ^0.8.24).
 
-Project: `~/Documents/riset/evm/solidity-basics` — `src/` (Types, Packing, Locations, Vault,
-Exercise) dan `test/`. Jalankan: `forge test -vv`.
+Hasil percobaan untuk materi ini ada di [EVM 07 - Hasil Praktik](Hasil%20Praktik/EVM%2007%20-%20Hasil%20Praktik.md).
 
 ## 1. Tipe data dan overflow
 
@@ -33,13 +35,15 @@ Exercise) dan `test/`. Jalankan: `forge test -vv`.
 
 Variabel kecil yang **berurutan** digabung dalam satu slot 32 byte.
 
-| Kontrak | Urutan | Slot terpakai | Gas `setAll` pertama |
-| --- | --- | ---: | ---: |
-| `Unpacked` | `uint128 a; uint256 b; uint128 c;` | 3 | 68.316 |
-| `Packed` | `uint128 a; uint128 c; uint256 b;` | 2 | 46.466 |
+| Kontrak | Urutan | Slot terpakai |
+| --- | --- | ---: |
+| `Unpacked` | `uint128 a; uint256 b; uint128 c;` | 3 |
+| `Packed` | `uint128 a; uint128 c; uint256 b;` | 2 |
 
-**Hemat 21.850 gas** hanya dari urutan deklarasi (≈ satu slot baru: 20.000 + 2.100, lihat
-[EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md)). Slot 0 `Packed` = `…0003` (c, byte 16–31) + `…0001` (a, byte 0–15).
+Hanya dengan mengubah urutan deklarasi, `Packed` menghemat satu slot. Penulisan pertama ke semua
+variabel jadi lebih murah sekitar biaya satu slot baru (20.000 + 2.100, lihat
+[EVM 03 - Transaksi dan Gas](EVM%2003%20-%20Transaksi%20dan%20Gas.md)). Di slot 0 `Packed`, `a` mengisi byte 0–15 dan `c` mengisi byte
+16–31 — kalau `a = 1` dan `c = 3`, slot 0 berisi `…0003` + `…0001`.
 
 `forge inspect <Kontrak> storage-layout` menampilkan slot dan offset tiap variabel.
 
@@ -49,15 +53,16 @@ muat satu slot — konsekuensinya error "amount exceeds 96 bits" (lihat
 
 ## 3. storage vs memory vs calldata
 
-| Lokasi | Sifat | Hasil test |
+| Lokasi | Sifat | Akibat |
 | --- | --- | --- |
-| `memory` | **salinan** sementara | `closeWithMemory` → `active` tetap `true`, perubahan hilang |
-| `storage` | **penunjuk** ke slot asli | `closeWithStorage` → `active = false`, tersimpan |
-| `calldata` | baca langsung dari input, read-only | **58.362** gas vs 85.794 (`memory`) untuk array 100 elemen, −32% |
+| `memory` | **salinan** sementara | mengubah struct dari storage lewat variabel `memory` → perubahan hilang |
+| `storage` | **penunjuk** ke slot asli | mengubah lewat variabel `storage` → tersimpan |
+| `calldata` | baca langsung dari input, read-only | lebih murah dari `memory` untuk parameter array, karena tidak perlu disalin |
 
 **Tanda bug:** compiler memberi warning *"Function state mutability can be restricted to view"*
-di `closeWithMemory` — fungsi bernama "close" ternyata tidak menulis apa pun. Warning seperti ini
-di fungsi yang seharusnya mengubah state = hampir pasti bug `memory`/`storage`.
+di fungsi yang memakai `memory` padahal bermaksud mengubah state — misalnya fungsi bernama
+"close" yang sebenarnya tidak menulis apa pun. Warning seperti ini di fungsi yang seharusnya
+mengubah state = hampir pasti bug `memory`/`storage`.
 
 Aturan praktis: parameter array/string di fungsi `external` → `calldata`. Mengubah struct di
 storage → `storage`.
@@ -71,23 +76,23 @@ storage → `storage`.
 | `internal` | ❌ | ✅ | ✅ |
 | `private` | ❌ | ✅ | ❌ (`Undeclared identifier` saat compile) |
 
-**`private` tidak rahasia.** `secretCode` terbaca dari slot 1 dengan `vm.load` (di mainnet:
-`cast storage`). `private` cuma menyembunyikan dari kontrak lain. Jangan simpan password atau
-kunci di kontrak.
+**`private` tidak rahasia.** Variabel `private` tetap bisa dibaca langsung dari slot storage-nya
+dengan `vm.load` di test, atau `cast storage` di mainnet. `private` cuma menyembunyikan dari
+kontrak lain. Jangan simpan password atau kunci di kontrak.
 
 ## 5. Modifier dan custom error
 
 | | `require(…, "string")` | custom error |
 | --- | ---: | ---: |
-| Revert data | **100 byte** | **36 byte** |
-| Gas panggilan gagal | 8.152 | **3.668** |
+| Revert data (pesan pendek) | **100 byte** | **36 byte** (dengan satu argumen `address`) |
+| Gas panggilan gagal | lebih mahal | **jauh lebih murah** |
 | Bisa membawa data | tidak | ya (`NotOwner(address)`) |
 
-- **Modifier dijalankan kiri ke kanan.** `setCode` punya `onlyOwner whenNotPaused`: saat paused,
+- **Modifier dijalankan kiri ke kanan.** Fungsi dengan `onlyOwner whenNotPaused`: saat paused,
   orang asing dapat `NotOwner`, bukan `Paused`, karena `onlyOwner` dicek duluan.
 - `_;` = tempat badan fungsi disisipkan.
 
-Tiga jenis revert data yang sudah ditemui:
+Tiga jenis revert data:
 
 | Jenis | Selector | Contoh |
 | --- | --- | --- |
@@ -98,8 +103,7 @@ Tiga jenis revert data yang sudah ditemui:
 ## 6. Menerima ETH: `payable`, `receive()`, `fallback()`
 
 Kontrak menolak ETH kecuali ETH itu masuk lewat fungsi `payable`, `receive()` (calldata
-kosong), atau `fallback()` yang `payable` (selector tidak cocok). Kode: `src/Payable.sol`,
-`test/Payable.t.sol`.
+kosong), atau `fallback()` yang `payable` (selector tidak cocok).
 
 ### Penjelasan detail
 
@@ -108,8 +112,8 @@ kosong), atau `fallback()` yang `payable` (selector tidak cocok). Kode: `src/Pay
 
 ## Latihan: `src/Exercise.sol`
 
-Kontrak `DepositBank` dengan 3 masalah. Test di `test/Exercise.t.sol` awalnya **gagal semua**
-(sudah diverifikasi bisa diselesaikan).
+Kontrak `DepositBank` dengan 3 masalah. Test di `test/Exercise.t.sol` awalnya **gagal semua**;
+tugasmu membuatnya lulus.
 
 ```bash
 cd ~/Documents/riset/evm/solidity-basics && forge test --match-contract ExerciseTest -vv
@@ -121,7 +125,24 @@ cd ~/Documents/riset/evm/solidity-basics && forge test --match-contract Exercise
 | 2 | `withdraw` tidak menyimpan `withdrawn = true` | Lihat bagian 3 |
 | 3 | Siapa pun bisa withdraw | `error NotDepositOwner(address caller)` + modifier `onlyDepositOwner(uint256 id)` |
 
+Status: ☐ belum dikerjakan
+
 ## Jebakan
 
 - Mengimpor file di luar project gagal (`Source … not found`) — Foundry mencari relatif ke root
   project.
+
+## Coba sendiri
+
+1. Buat project dengan `forge init`.
+2. Tulis test untuk setiap baris tabel overflow, pakai `vm.expectRevert` untuk kasus yang revert.
+3. Buat kontrak `Unpacked` dan `Packed`, bandingkan `forge inspect <Kontrak> storage-layout` dan gas
+   penulisan pertamanya.
+4. Tulis fungsi yang mengubah struct lewat `memory` dan lewat `storage`, lalu bandingkan hasilnya.
+5. Simpan variabel `private`, lalu baca slot-nya dengan `vm.load`.
+6. Bandingkan revert data dan gas `require` dengan pesan vs custom error.
+
+```bash
+forge test -vv
+forge inspect <Kontrak> storage-layout
+```

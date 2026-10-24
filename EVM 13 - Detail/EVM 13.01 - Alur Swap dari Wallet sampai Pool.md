@@ -1,12 +1,14 @@
 ---
 title: EVM 13.01 - Alur Swap dari Wallet sampai Pool
 tags: [learning, evm, defi, amm, uniswap, swap]
-updated: 2026-10-18
+updated: 2026-10-24
 ---
 
 # Alur Swap dari Wallet sampai Pool
 
 Bagian dari [EVM 13 - AMM x·y=k](../EVM%2013%20-%20AMM%20x%C2%B7y%3Dk.md) · terkait: [EVM 09 - Bahaya Approval ERC-20](../EVM%2009%20-%20Bahaya%20Approval%20ERC-20.md) · [EVM 14 - Swap dari Kontrak dan Sandwich](../EVM%2014%20-%20Swap%20dari%20Kontrak%20dan%20Sandwich.md)
+
+Hasil percobaan untuk materi ini ada di [EVM 13.01 - Hasil Praktik](../Hasil%20Praktik/EVM%2013.01%20-%20Hasil%20Praktik.md).
 
 **Swap di DEX bukan "tukar dengan orang lain".** Tidak ada lawan transaksi dan tidak ada order
 book. Yang ada: sebuah kontrak (pool/pair) yang memegang dua token. Kamu menyetor token A ke pool,
@@ -95,8 +97,8 @@ pair), `Transfer` WETH (pair → kamu), `Sync` (reserve baru), `Swap`.
 ## Kenapa harga bisa "jelek"
 
 Harga tidak ditentukan siapa pun — murni dari rumus. Makin besar `amountIn` dibanding reserve, makin
-jauh titiknya bergeser di kurva `x·y=k` → **price impact**. Tabel di [EVM 13 - AMM x·y=k](../EVM%2013%20-%20AMM%20x%C2%B7y%3Dk.md): 1 ETH
-kena ~0,33%, 1.000 ETH (25% reserve) kena ~20,5%.
+jauh titiknya bergeser di kurva `x·y=k` → **price impact**. Di [EVM 13 - AMM x·y=k](../EVM%2013%20-%20AMM%20x%C2%B7y%3Dk.md): swap kecil
+kena sekitar sebesar fee, swap seperempat reserve kena sekitar 20%.
 
 Selisih antara quote (langkah 0) dan eksekusi (langkah 2) adalah **slippage**: transaksi lain —
 termasuk penyerang sandwich — bisa masuk duluan dan menggeser reserve. `amountOutMin` membatasi
@@ -114,40 +116,42 @@ berikutnya). Hanya pair terakhir yang mengirim ke kamu. Tiap hop kena fee dan pr
 | --- | --- |
 | **Uniswap v3 / PancakeSwap v3** | likuiditas per rentang harga (tick); pool memanggil `uniswapV3SwapCallback` dan **kamu/router membayar di callback** — bukan transfer duluan. Lihat [EVM 15 - Uniswap v3 Likuiditas Terkonsentrasi](../EVM%2015%20-%20Uniswap%20v3%20Likuiditas%20Terkonsentrasi.md) |
 | **Uniswap v4** | semua pool di satu kontrak `PoolManager`; saldo dicatat sebagai utang (flash accounting) dan diselesaikan di akhir |
-| **Aggregator** (1inch, 0x, Paraswap, Jupiter di Solana) | mencari rute termurah lintas banyak DEX, bisa memecah order ke beberapa pool; ujungnya tetap memanggil pool-pool di atas |
+| **Aggregator** (1inch, 0x, Paraswap) | mencari rute termurah lintas banyak DEX, bisa memecah order ke beberapa pool; ujungnya tetap memanggil pool-pool di atas |
 | **Intent / RFQ** (UniswapX, CoW Swap) | kamu menandatangani pesanan off-chain; *solver*/market maker yang mengeksekusi dan mengisi dari mana saja. Di sini memang ada lawan transaksi |
 | **Curve / StableSwap** | rumus berbeda (lebih datar di sekitar 1:1) untuk pasangan stablecoin, price impact jauh lebih kecil |
 
-## Praktik: `mini-amm`
+## Coba sendiri: `mini-amm`
 
-Project `~/Documents/riset/evm/mini-amm` (dibuat 2026-10-18) — Uniswap v2 versi kecil yang ditulis
-dari nol: `Token`, `MiniPair`, `MiniFactory`, `MiniRouter`. Jalan lokal tanpa RPC/fork.
+Cara paling cepat memahami alur di atas: tulis Uniswap v2 versi kecil dari nol — `Token`,
+`MiniPair`, `MiniFactory`, `MiniRouter` — dan jalankan lokal tanpa RPC/fork.
+
+1. Buat pool test, misalnya 1.000 WETH + 2.000.000 USDC (2.000 USDC/WETH).
+2. Swap 1.000 USDC lewat router. Bandingkan output dengan quote, hitung harga efektif dan harga spot
+   baru, dan pastikan router tidak memegang token setelah swap.
+3. Swap langsung ke pair tanpa router. Minta output 1 wei lebih dari yang boleh → harus revert `K`.
+4. Transfer token ke pair di transaksi terpisah, lalu lihat bahwa orang lain bisa mengambil
+   output-nya. Ini alasan transfer dan `swap` harus dalam satu transaksi.
+5. Jual 1 / 10 / 100 / 500 WETH dan catat price impact tiap ukuran.
+6. Bolak-balik swap beberapa kali, lalu bandingkan kerugian trader dengan tambahan yang ditarik LP.
+7. Multi-hop tiga token, flash swap (bayar balik dengan fee vs tanpa fee), dan sandwich dengan dan
+   tanpa slippage.
+8. Deploy ke `anvil` dan jalankan swap manual dengan `cast`. `cast run <tx>` menampilkan urutan
+   `transferFrom` → `pair.swap` → `transfer` keluar → `balanceOf` → `Sync` → `Swap`, sama dengan
+   langkah 2–3 di atas.
 
 ```bash
-cd ~/Documents/riset/evm/mini-amm
-forge test -vv                  # 13 test + log
-forge test --mt test_01 -vvvv   # trace lengkap satu swap
+forge test -vv                  # semua test + log
+forge test --mt test_01 -vvvv   # trace lengkap satu test swap
+cast run <tx>                   # urutan panggilan satu swap di anvil
 ```
 
-Pool test: 1.000 WETH + 2.000.000 USDC (2.000 USDC/WETH). Hasil yang sudah dijalankan:
+Latihan lanjutan:
 
-| Test | Hasil |
-| --- | --- |
-| `test_01` swap 1.000 USDC | dapat 0,4982 WETH = quote; harga efektif 2.007,02; spot jadi 2.001,997; router tidak memegang token |
-| `test_05` / `test_06` | swap langsung ke pair tanpa router berhasil; minta 1 wei lebih → `MiniPair: K` |
-| `test_07` | transfer ke pair di transaksi terpisah → orang lain yang mengambil output-nya |
-| `test_08` jual 1 / 10 / 100 / 500 WETH | price impact 0,39% / 1,28% / 9,33% / 33,46% |
-| `test_09` 5× bolak-balik 10.000 USDC | trader rugi 294,55 USDC = persis tambahan yang ditarik LP |
-| `test_10` USDC → WETH → PEPE | output pair 1 langsung masuk pair 2 |
-| `test_11` / `test_12` flash swap 100 WETH | bayar balik 100,3009 lolos; bayar 100 → `K` |
-| `test_13` sandwich front-run 200.000 USDC | korban 4,10 bukan 4,96 WETH, penyerang +637,58 USDC; dengan slippage 0,5% korban revert |
-
-Swap manual di anvil (`script/Deploy.s.sol` + `cast`) juga sudah dicoba: `cast run <tx>` menampilkan
-urutan `transferFrom` → `pair.swap` → `transfer` keluar → `balanceOf` → `Sync` → `Swap`, sama
-dengan langkah 2–3 di atas. Perintahnya dan 5 latihan (fee Pancake, exact output, mempercayai
-caller, hapus `lock`, sandwich break-even) ada di `README.md` project.
-
-Dokumentasi lengkap project (Inggris) ada di `~/Documents/riset/evm/mini-amm/docs/` — 11 halaman: arsitektur, lifecycle swap dengan referensi baris, matematika (`getAmountOut`, cek `K`, price impact, fee flash swap), liquidity, multi-hop + flash swap, security, referensi kontrak, test, playground anvil, perbedaan dengan Uniswap v2, latihan. Mulai dari `docs/README.md`.
+1. Ubah fee jadi 0,25% (gaya PancakeSwap).
+2. Tambahkan swap exact output.
+3. Apa yang terjadi kalau pair mempercayai angka dari caller, bukan saldonya sendiri?
+4. Hapus `lock` (reentrancy guard) dan cari cara menyalahgunakannya.
+5. Hitung titik break-even sandwich.
 
 ## Ringkasan satu kalimat
 

@@ -1,12 +1,14 @@
 ---
 title: EVM 01.09 - Bytecode yang Sama
 tags: [learning, evm, bytecode]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Bytecode yang Sama
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.08 - Gas](EVM%2001.08%20-%20Gas.md) · [EVM 01.10 - Format Alamat 0x](EVM%2001.10%20-%20Format%20Alamat%200x.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 01.09 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.09%20-%20Hasil%20Praktik.md).
 
 Solidity tidak dijalankan langsung. Compiler (`solc`) mengubahnya jadi **bytecode**: deretan
 byte, dan tiap byte adalah satu instruksi (**opcode**) untuk EVM. Contoh awal hampir semua
@@ -23,13 +25,15 @@ sama dengan arti yang sama** (`0x01` = ADD, `0x55` = SSTORE, dst.) plus aturan g
 (hampir) sama. Akibatnya file bytecode yang **persis sama** bisa di-deploy ke Ethereum, BSC,
 Base, dll. tanpa compile ulang, dan perilakunya sama.
 
-Bukti (2026-10-03): kontrak Multicall3 di `0xcA11bde05977b3631167028862bE2a173976CA11`
-punya hash bytecode identik di Ethereum dan BSC:
-`0xd5c15df687b16f2ff992fc8d767b4216323184a2bbc6ee2f9c398c318e770891`
-(`cast code <addr> --rpc-url <rpc> | cast keccak`).
+Contohnya kontrak Multicall3 di `0xcA11bde05977b3631167028862bE2a173976CA11`: alamat dan
+bytecode-nya sama di Ethereum dan BSC.
 
-Solana tidak bisa menjalankan bytecode ini: SVM memakai format program lain (sBPF), jadi
-kontraknya harus ditulis dan di-compile ulang untuk mesin itu.
+**Coba sendiri:** bandingkan hash bytecode kontrak itu di dua chain. Hasilnya harus identik.
+
+```bash
+cast code 0xcA11bde05977b3631167028862bE2a173976CA11 --rpc-url <rpc-ethereum> | cast keccak
+cast code 0xcA11bde05977b3631167028862bE2a173976CA11 --rpc-url <rpc-bsc> | cast keccak
+```
 
 Catatan: "sama" di sini berarti kompatibel, bukan identik 100%. Beberapa chain tertinggal
 atau berbeda di opcode baru (misalnya `PUSH0` sempat belum didukung di beberapa L2), jadi

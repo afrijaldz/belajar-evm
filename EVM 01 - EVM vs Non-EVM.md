@@ -1,7 +1,7 @@
 ---
 title: EVM 01 - EVM vs Non-EVM
-tags: [learning, ethereum, evm, bsc, solana, hyperliquid]
-updated: 2026-10-10
+tags: [learning, ethereum, evm, bsc, hyperliquid]
+updated: 2026-10-24
 ---
 
 # EVM vs Non-EVM
@@ -10,6 +10,8 @@ Pertanyaan: apa itu EVM, dan kapan sebuah chain disebut chain EVM?
 
 **EVM adalah mesin eksekusinya, bukan koin atau chain tertentu.** Ethereum, BSC, Polygon,
 Base, Arbitrum, dan Avalanche C-Chain semuanya chain EVM, walaupun native token-nya berbeda.
+
+Hasil percobaan untuk materi ini ada di [EVM 01 - Hasil Praktik](Hasil%20Praktik/EVM%2001%20-%20Hasil%20Praktik.md).
 
 ## EVM itu mesinnya, bukan koinnya
 
@@ -52,31 +54,24 @@ Penjelasan detail: [EVM 01.12 - Native Token](EVM%2001%20-%20Detail/EVM%2001.12%
 | Polygon PoS | EVM | POL |
 | Avalanche C-Chain | EVM | AVAX |
 | HyperEVM | EVM | HYPE |
-| Solana | **SVM** (non-EVM) | SOL |
 | Bitcoin | Script (non-EVM) | BTC |
 | Sui, Aptos | **Move VM** (non-EVM) | SUI, APT |
 
 Analogi: EVM itu seperti Android. Samsung dan Xiaomi sama-sama Android walaupun mereknya
 berbeda, dan aplikasi yang sama bisa berjalan di keduanya.
 
-## Bukti: perintah yang sama di chain berbeda (2026-09-24)
+## Perintah yang sama di chain berbeda
 
-Membaca token di BSC (CAKE Diperiksa Ulang 2026-09-24, BNB Diperiksa Ulang 2026-09-24)
-memakai perintah yang **persis sama** dengan membaca token di Ethereum
-(UNI Diperiksa dengan Saringan Lima Chain, ETHFI Diperiksa dengan Saringan Lima Chain):
+Karena mesinnya sama, membaca token di BSC memakai perintah yang **persis sama** dengan membaca
+token di Ethereum:
 
 - `eth_call` dengan selector `0x70a08231` (`balanceOf`) dan `0x18160ddd` (`totalSupply`)
-- `eth_getBalance` untuk membaca BNB di `0xdead`
+- `eth_getBalance` untuk membaca saldo native token, misalnya BNB di `0xdead`
 - `cast` (Foundry) pindah chain cukup dengan mengganti `--rpc-url`
 - alamat `0x000000000000000000000000000000000000dEaD` berlaku di kedua chain
 
 Hal yang sama berlaku di chain EVM lain: Base dan Arbitrum dibaca dengan cara yang sama di
 [EVM 23 - Multi-Chain](EVM%2023%20-%20Multi-Chain.md).
-
-Solana berbeda. Di sana dipakai `getTokenSupply` dan `getTokenAccountsByOwner` — API yang
-lain sama sekali — karena Solana **bukan EVM**. Model datanya juga beda: satu wallet bisa punya
-banyak token account (wallet buyback RAY punya 6). Lihat Account Model Solana dan
-RAY JUP ORCA Diperiksa Ulang 2026-09-24.
 
 ## Hal yang sering membingungkan
 
@@ -93,7 +88,7 @@ RAY JUP ORCA Diperiksa Ulang 2026-09-24.
   | | Ethereum | BSC |
   | --- | --- | --- |
   | Konsensus | PoS, validator sangat banyak | PoSA, validator jauh lebih sedikit (lebih cepat, lebih terpusat) |
-  | Block time | 12 detik | **0,45 detik** (terukur 2026-09-24) |
+  | Block time | 12 detik | **~0,45 detik** |
   | Aturan ekonomi khusus | EIP-1559 burn | BEP-95 burn + auto-burn kuartalan |
   | Chain ID | 1 | 56 |
 
@@ -111,4 +106,3 @@ RAY JUP ORCA Diperiksa Ulang 2026-09-24.
 
 1. Model akun EVM: EOA vs contract account
 2. Cara transaksi dan gas bekerja di EVM
-3. Bandingkan dengan Account Model Solana

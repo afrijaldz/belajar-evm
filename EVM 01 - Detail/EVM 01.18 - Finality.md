@@ -1,14 +1,14 @@
 ---
 title: EVM 01.18 - Finality
 tags: [learning, evm, ethereum, bsc]
-updated: 2026-10-10
+updated: 2026-10-24
 ---
 
 # Finality
 
 Bagian dari [EVM 01 - EVM vs Non-EVM](../EVM%2001%20-%20EVM%20vs%20Non-EVM.md) · ← [EVM 01.17 - Attestation](EVM%2001.17%20-%20Attestation.md)
 
-Pertanyaan: finality itu gimana cara kerjanya?
+Hasil percobaan untuk materi ini ada di [EVM 01.18 - Hasil Praktik](../Hasil%20Praktik/EVM%2001.18%20-%20Hasil%20Praktik.md).
 
 **Blok yang sudah *final* tidak bisa dibatalkan, kecuali minimal 1/3 total stake rela kena
 slashing.** Sebelum final, blok masih bisa diganti cabang lain (*reorg*). Finality adalah
@@ -25,7 +25,7 @@ RPC `eth_*` menyediakan tiga tag blok, sesuai tingkat kepastiannya:
 | `finalized` | blok checkpoint yang sudah **finalized** | tidak, tanpa 1/3 stake kena slashing |
 
 Contoh pakai: `cast block finalized --rpc-url …`. Exchange dan bridge biasanya menunggu
-`finalized` sebelum menganggap deposit masuk (pengetahuan umum).
+`finalized` sebelum menganggap deposit masuk.
 
 ## Cara kerjanya: checkpoint, justified, finalized
 
@@ -54,8 +54,12 @@ attestation (lihat [EVM 01.17 - Attestation](EVM%2001.17%20-%20Attestation.md)).
 
 Akibatnya, blok di awal epoch N jadi final sekitar 2 epoch kemudian (±12,8 menit). Blok yang
 sedikit setelah checkpoint harus menunggu checkpoint berikutnya, jadi bisa sampai ±19 menit.
-Rentang ini diturunkan dari aturan di atas; yang diukur langsung cuma posisi checkpoint (lihat
-Bukti).
+Dalam praktik, blok `finalized` tertinggal sekitar 60-an blok (±13 menit) dari `latest`.
+
+Tag RPC dan checkpoint saling terhubung langsung: blok execution di dalam checkpoint finalized
+adalah blok yang dikembalikan `eth_getBlockByNumber("finalized")`, dan blok di dalam checkpoint
+justified adalah `eth_getBlockByNumber("safe")`. Root kedua checkpoint selalu root blok pertama
+epoch-nya, dan keduanya maju tepat 1 epoch setiap kali melewati batas epoch.
 
 ## Kenapa harus 2/3
 
@@ -70,33 +74,38 @@ membatalkan finality pasti memakan minimal 1/3 total stake.
 Kalau validator yang online kurang dari 2/3 stake, rantai **tetap membuat blok**, tapi tidak
 ada checkpoint baru yang final. Setelah 4 epoch tanpa finality, *inactivity leak* mulai
 mengurangi stake validator yang offline sedikit demi sedikit, sampai validator yang online
-kembali mencapai 2/3 dan finality jalan lagi (pengetahuan umum).
+kembali mencapai 2/3 dan finality jalan lagi.
 
 Ethereum mainnet pernah kehilangan finality dua kali pada Mei 2023, masing-masing kurang dari
 sekitar satu jam, karena masalah di beberapa consensus client. Blok tetap jalan selama
-kejadian itu (pengetahuan umum, tidak dicek ulang).
+kejadian itu.
 
 ## BSC
 
 BSC punya *fast finality* (BEP-126): validator memberi suara untuk blok, dan blok jadi final
-setelah didukung lebih dari 2/3 validator, tanpa menunggu epoch (mekanisme dari pengetahuan
-umum). Hasilnya jauh lebih cepat: saat dicek, blok `finalized` cuma 4 blok di belakang
-`latest`.
+setelah didukung lebih dari 2/3 validator, tanpa menunggu epoch. Hasilnya jauh lebih cepat:
+blok `finalized` cuma beberapa blok di belakang `latest`, sekitar 2 detik.
 
-## Bukti (2026-10-10)
+## Coba sendiri
 
-Data dari Beacon API dan JSON-RPC publicnode (Ethereum), dan `bsc-dataseed.bnbchain.org` (BSC).
+1. Bandingkan nomor blok `finalized`, `safe`, dan `latest` di Ethereum dan di BSC.
+2. Ambil `finality_checkpoints` dari Beacon API, lalu cocokkan root checkpoint dengan root blok
+   pertama epoch-nya.
+3. Cari blok execution di dalam checkpoint finalized dan justified, lalu bandingkan dengan
+   blok `finalized` dan `safe` dari JSON-RPC.
 
-| Cek | Hasil |
-| --- | --- |
-| `finality_checkpoints` saat head di epoch 481.228 (slot ke-1 epoch itu) | current justified = epoch **481.227**, finalized = epoch **481.226** |
-| Root checkpoint vs root blok | justified 481.227 = `0xbb40…` = blok slot 15.399.264; finalized 481.226 = `0x92e3…` = blok slot 15.399.232 → keduanya blok pertama epoch-nya |
-| Satu epoch sebelumnya (state slot 15.399.265, epoch 481.227) | justified 481.226, finalized 481.225 → keduanya maju tepat 1 setelah melewati batas epoch |
-| Blok execution di dalam checkpoint finalized | 26.160.329 (`0xd165…`) = **sama persis** dengan `eth_getBlockByNumber("finalized")` |
-| Blok execution di dalam checkpoint justified | 26.160.361 = **sama persis** dengan `eth_getBlockByNumber("safe")` |
-| `latest` saat itu | 26.160.394 → `finalized` tertinggal **65 blok** (±13 menit) |
-| BSC: `finalized` / `safe` / `latest` | 126.784.037 / 126.784.039 / 126.784.041 → `finalized` tertinggal **4 blok** (±1,8 detik dengan blok 0,45 detik) |
-| State lebih lama dari ±1 epoch di Beacon API publik | HTTP 403, jadi riwayat checkpoint lebih panjang tidak bisa dibaca |
+```bash
+BEACON=https://ethereum-beacon-api.publicnode.com
+cast block finalized --field number --rpc-url https://ethereum-rpc.publicnode.com
+cast block safe --field number --rpc-url https://ethereum-rpc.publicnode.com
+cast block latest --field number --rpc-url https://ethereum-rpc.publicnode.com
+cast block finalized --field number --rpc-url https://bsc-dataseed.bnbchain.org
+curl -s $BEACON/eth/v1/beacon/states/head/finality_checkpoints
+curl -s $BEACON/eth/v2/beacon/blocks/<root> | jq '.data.message.body.execution_payload.block_number'
+```
+
+**Jebakan:** Beacon API publik biasanya menolak state yang lebih lama dari sekitar 1 epoch
+(HTTP 403), jadi riwayat checkpoint yang panjang tidak bisa dibaca dari sana.
 
 ---
 

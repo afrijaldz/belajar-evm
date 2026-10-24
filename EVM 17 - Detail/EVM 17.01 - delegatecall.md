@@ -1,12 +1,14 @@
 ---
 title: EVM 17.01 - delegatecall
 tags: [learning, evm, solidity, delegatecall, proxy, security]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # delegatecall
 
 Bagian dari [EVM 17 - Proxy dan Upgrade](../EVM%2017%20-%20Proxy%20dan%20Upgrade.md) · terkait: [EVM 07.02 - Fallback](../EVM%2007%20-%20Detail/EVM%2007.02%20-%20Fallback.md)
+
+Hasil percobaan untuk materi ini ada di [EVM 17.01 - Hasil Praktik](../Hasil%20Praktik/EVM%2017.01%20-%20Hasil%20Praktik.md).
 
 **`delegatecall` adalah cara menjalankan kode kontrak lain seolah-olah kode itu milik
 kontrak sendiri.** Kodenya dipinjam dari kontrak B, tetapi semua yang lain tetap milik
@@ -46,36 +48,28 @@ EOA ─► A ─────────► B                  EOA ─► A ─�
                                         msg.sender = EOA
 ```
 
-## Bukti test Foundry
+## Apa yang terjadi saat dicoba
 
-File: `~/Documents/riset/evm/proxy/src/Delegatecall.sol` dan `test/Delegatecall.t.sol`.
-`Probe.record(n)` menyimpan `number`, `msg.sender`, `msg.value`, dan `address(this)`.
-`Caller` punya layout storage yang sama dan memanggil `record` dengan dua cara.
+Misalkan `Probe.record(n)` menyimpan `number`, `msg.sender`, `msg.value`, dan `address(this)`, dan `Caller`
+punya layout storage yang sama lalu memanggil `record` dengan dua cara. Alice memanggil `Caller` dengan
+ETH dan `n = 7`:
 
-```bash
-cd ~/Documents/riset/evm/proxy && forge test --match-path test/Delegatecall.t.sol -vv
-```
-
-Hasil: **5 passed, 0 failed**.
-
-Alice memanggil `Caller` dengan 1 ETH dan `n = 7`:
-
-| Hasil | `viaCall` | `viaDelegatecall` |
+| | `viaCall` | `viaDelegatecall` |
 | --- | --- | --- |
-| Storage yang berubah | `Probe` (`number` = 7) | **`Caller`** (`number` = 7) |
+| Storage yang berubah | `Probe` | **`Caller`** |
 | Storage yang tetap 0 | `Caller` | `Probe` |
 | `sender` yang tercatat | `Caller` | **alice** |
-| `value` yang tercatat | 1 ETH | 1 ETH (`msg.value` tx asli) |
+| `value` yang tercatat | nilai yang dikirim `Caller` | `msg.value` tx asli |
 | `self` (`address(this)`) | `Probe` | **`Caller`** |
-| ETH 1 ETH berakhir di | `Probe` | `Caller` |
+| ETH berakhir di | `Probe` | `Caller` |
 
-Test lain:
+Kasus lain yang perlu kamu kenali:
 
-| Test | Hasil |
+| Kasus | Akibat |
 | --- | --- |
 | `delegatecall` ke alamat **tanpa kode** | `ok = true`, return data 0 byte, tidak ada yang berubah |
-| `delegatecall` ke fungsi yang revert | `ok = false`, return data = `Error(string)` "probe failed"; revert tidak diteruskan otomatis |
-| `UnsafeWallet.execute(target, data)` yang memakai `delegatecall`, dipanggil attacker dengan `TakeOver.pwn()` | `owner` wallet berubah menjadi **attacker**; storage `TakeOver` sendiri tetap kosong |
+| `delegatecall` ke fungsi yang revert | `ok = false`, return data = `Error(string)` dari target; revert **tidak diteruskan otomatis**, jadi pemanggil wajib mengecek `ok` |
+| Wallet dengan `execute(target, data)` yang memakai `delegatecall`, dipanggil penyerang dengan kontrak `TakeOver.pwn()` | `owner` wallet berubah menjadi penyerang; storage `TakeOver` sendiri tetap kosong |
 
 ## Opcode
 
@@ -86,8 +80,9 @@ Test lain:
 | `STATICCALL` | `0xfa` | sama dengan `DELEGATECALL`, tetapi tidak boleh mengubah state |
 | `CALLCODE` | `0xf2` | versi lama; storage milik A, tetapi `msg.sender` di kode B = kontrak A, bukan pemanggil asli. Diganti `DELEGATECALL` (EIP-7) |
 
-Disassembly `Caller` berisi 2 `DELEGATECALL` (`viaDelegatecall` dan `rawDelegatecall`) dan
-1 `CALL` (`viaCall`).
+Setiap `delegatecall` di Solidity menjadi satu opcode `DELEGATECALL` di bytecode, dan setiap
+`call` menjadi `CALL`. Jadi `cast disassemble` bisa dipakai untuk mencari kontrak yang memakai
+`delegatecall`.
 
 ## Kegunaan
 
@@ -104,8 +99,8 @@ Disassembly `Caller` berisi 2 `DELEGATECALL` (`viaDelegatecall` dan `rawDelegate
 ## Bahaya
 
 - **`delegatecall` ke kode yang tidak dipercaya = menyerahkan kontrak.** Kode itu bisa menulis
-  slot mana pun, termasuk `owner`, dan bisa memindahkan semua ETH. Test `UnsafeWallet`
-  membuktikan ini dalam satu transaksi.
+  slot mana pun, termasuk `owner`, dan bisa memindahkan semua ETH. Satu transaksi cukup untuk
+  mengambil alih wallet.
 - **Alamat tanpa kode tetap "sukses".** Kalau alamat logika salah atau kontraknya hilang,
   `delegatecall` mengembalikan `true` tanpa menjalankan apa pun. Proxy yang baik memeriksa
   `target.code.length > 0` sebelum dipakai.
@@ -114,7 +109,7 @@ Disassembly `Caller` berisi 2 `DELEGATECALL` (`viaDelegatecall` dan `rawDelegate
 - **Insiden nyata:** dompet multisig Parity (2017) memakai satu kontrak library bersama lewat
   `delegatecall`. Seseorang meng-`initialize` library itu, menjadi owner, lalu memanggil
   `selfdestruct`. Semua wallet yang bergantung pada library itu kehilangan kodenya dan dananya
-  terkunci (sekitar 513.000 ETH). Angka ini dari laporan publik dan tidak dicek ulang di sesi ini.
+  terkunci (sekitar 513.000 ETH, angka dari laporan publik).
 
 ## Hal yang sering membingungkan
 
@@ -124,6 +119,21 @@ Disassembly `Caller` berisi 2 `DELEGATECALL` (`viaDelegatecall` dan `rawDelegate
   pemanggil, tetapi kode B tetap bisa membaca `msg.value` dari tx asli.
 - **Constructor B tidak pernah berjalan di A.** Constructor hanya berjalan saat B di-deploy,
   di storage B. Karena itu proxy memakai fungsi `initialize`.
+
+## Coba sendiri
+
+1. Tulis `Probe` dengan fungsi `record(n)` yang menyimpan `number`, `msg.sender`, `msg.value`, dan
+   `address(this)`.
+2. Tulis `Caller` dengan layout storage yang sama, plus `viaCall`, `viaDelegatecall`, dan `rawDelegatecall`.
+3. Panggil keduanya dengan 1 ETH dan `n = 7`, lalu bandingkan storage `Probe` dan `Caller`.
+4. Uji `delegatecall` ke alamat tanpa kode dan ke fungsi yang revert.
+5. Tulis `UnsafeWallet` dan `TakeOver`, lalu ambil alih `owner`.
+6. Hitung `DELEGATECALL` dan `CALL` di hasil `cast disassemble` milik `Caller`.
+
+```bash
+forge test --match-path test/Delegatecall.t.sol -vv
+cast disassemble $(forge inspect Caller deployedBytecode) | grep -E 'DELEGATECALL|CALL'
+```
 
 ---
 

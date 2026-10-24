@@ -1,12 +1,14 @@
 ---
 title: EVM 07.01 - Payable dan receive
 tags: [learning, evm, solidity, payable]
-updated: 2026-10-03
+updated: 2026-10-24
 ---
 
 # Payable dan receive()
 
 Bagian dari [EVM 07 - Dasar Solidity](../EVM%2007%20-%20Dasar%20Solidity.md) · [EVM 07.02 - Fallback](EVM%2007.02%20-%20Fallback.md) →
+
+Hasil percobaan untuk materi ini ada di [EVM 07.01 - Hasil Praktik](../Hasil%20Praktik/EVM%2007.01%20-%20Hasil%20Praktik.md).
 
 **Secara default, kontrak Solidity menolak ETH.** Ada tiga cara agar kontrak bisa menerima
 ETH:
@@ -56,39 +58,32 @@ tx masuk ke kontrak
 └─ lalu: tx membawa ETH, tapi fungsi tujuan tidak payable? ──► REVERT tanpa pesan
 ```
 
-## Bukti test Foundry
+## Akibat alur ini
 
-File: `~/Documents/riset/evm/solidity-basics/src/Payable.sol` dan `test/Payable.t.sol`.
-
-```bash
-cd ~/Documents/riset/evm/solidity-basics && forge test --match-path test/Payable.t.sol -vv
-```
-
-Hasil: **9 passed, 0 failed** (Solc 0.8.28).
-
-| Test | Hasil |
+| Panggilan | Yang terjadi |
 | --- | --- |
-| `pay{value: 1 ether}()` (payable) | sukses, `msg.value` = 1 ETH, saldo kontrak 1 ETH |
-| `notPayable()` + 1 ETH | **revert**, revert data **0 byte** (tidak ada pesan error) |
-| `notPayable()` tanpa ETH | sukses |
-| Kirim ETH polos ke kontrak tanpa `receive()`/`fallback()` | **gagal**, saldo kontrak tetap 0 |
-| Kirim ETH polos ke kontrak yang punya `receive()` | `receive()` jalan |
-| Panggil dengan calldata kosong dan **0 ETH** | `receive()` tetap jalan |
-| Panggil `doesNotExist()` + ETH | `fallback()` jalan |
-| Kirim ETH dengan calldata 1 byte (`0x01`) | `fallback()` jalan, bukan `receive()` |
-| Panggil `hello()` (fungsi yang ada) | `hello()` jalan, `receive()`/`fallback()` tidak disentuh |
-| `fallback()` non-payable: panggilan tanpa ETH | sukses |
-| `fallback()` non-payable: dengan ETH | **revert** (calldata kosong maupun berisi) |
+| Fungsi `payable` + ETH | sukses, `msg.value` terisi, saldo kontrak bertambah |
+| Fungsi non-payable + ETH | **revert**, revert data **0 byte** (tidak ada pesan error) |
+| Fungsi non-payable tanpa ETH | sukses |
+| ETH polos ke kontrak tanpa `receive()`/`fallback()` | **gagal**, saldo kontrak tidak berubah |
+| ETH polos ke kontrak yang punya `receive()` | `receive()` jalan |
+| Calldata kosong dan **0 ETH** | `receive()` tetap jalan |
+| Fungsi yang tidak ada + ETH | `fallback()` jalan |
+| ETH dengan calldata 1 byte (mis. `0x01`) | `fallback()` jalan, bukan `receive()` |
+| Fungsi yang ada | fungsi itu jalan, `receive()`/`fallback()` tidak disentuh |
+| `fallback()` non-payable, tanpa ETH | sukses |
+| `fallback()` non-payable, dengan ETH | **revert** (calldata kosong maupun berisi) |
 
-Kesimpulan dari baris "calldata kosong dan 0 ETH": `receive()` dipilih berdasarkan
-**calldata kosong**, bukan berdasarkan ada atau tidaknya ETH.
+`receive()` dipilih berdasarkan **calldata kosong**, bukan berdasarkan ada atau tidaknya ETH.
 
 ## Isi bytecode: pemeriksaan `CALLVALUE`
 
 Kata `payable` tidak menambahkan kode. Kode tambahan justru muncul di fungsi
 **non-payable**: compiler menyisipkan pemeriksaan "ETH harus 0".
 
-Disassembly `OnlyPayableFunction` (`forge inspect … deployedBytecode | cast disassemble`):
+Contoh disassembly kontrak kecil `OnlyPayableFunction` dengan fungsi `pay()` (payable),
+`notPayable()`, dan variabel publik `lastValue`, tanpa `receive()`/`fallback()`
+(`forge inspect … deployedBytecode | cast disassemble`):
 
 ```
 dispatcher:
@@ -125,12 +120,12 @@ yang diteruskan ke `receive()` penerima:
 | `to.send(x)` | **2.300** | return `false` |
 | `to.call{value: x}("")` | semua sisa gas | return `false` |
 
-Hasil test:
+Akibatnya:
 
-| Penerima | `transfer` | `send` | `call` |
+| `receive()` penerima | `transfer` | `send` | `call` |
 | --- | --- | --- | --- |
-| `LoggingReceiver` (`receive()` hanya `emit`) | sukses | — | — |
-| `CountingReceiver` (`receive()` menulis storage, `count++`) | **revert** | **`false`** | sukses, `count` = 1 |
+| hanya `emit` (muat di 2.300 gas) | sukses | `true` | sukses |
+| menulis storage (mis. `count++`) | **revert** | **`false`** | sukses |
 
 Menulis slot storage baru butuh lebih dari 20.000 gas (lihat [EVM 01.08 - Gas](../EVM%2001%20-%20Detail/EVM%2001.08%20-%20Gas.md)), jauh di
 atas 2.300. Jadi `transfer()` dan `send()` gagal mengirim ETH ke kontrak yang `receive()`-nya
@@ -140,10 +135,9 @@ praktik sekarang memakai `call` dan melindunginya dari reentrancy (lihat
 
 ## ETH bisa masuk tanpa melewati receive()
 
-`receive()` **tidak bisa** menolak semua ETH. Test `test_SelfdestructBypassesReceive`:
-kontrak `ForceSender` memanggil `selfdestruct(target)` ke kontrak yang tidak punya `receive()`
-maupun `fallback()`. Hasilnya, saldo target menjadi **1 ETH** dan tidak ada kode target yang
-berjalan (`lastValue` tetap 0).
+`receive()` **tidak bisa** menolak semua ETH. Kontrak yang memanggil `selfdestruct(target)`
+mengirim seluruh saldonya ke `target`, walaupun `target` tidak punya `receive()` maupun
+`fallback()`. Saldo target bertambah dan tidak ada kode target yang berjalan.
 
 Cara lain yang juga melewati kode penerima: alamat kontrak dijadikan penerima block reward
 (`coinbase`), atau ETH dikirim ke alamat kontrak sebelum kontrak itu di-deploy (alamatnya
@@ -165,8 +159,23 @@ saldo di variabel sendiri yang hanya bertambah lewat fungsi deposit. Ini juga al
   revert.
 - **EOA tidak punya `receive()`.** EOA selalu menerima ETH karena tidak punya kode. Kecuali
   EOA itu sedang didelegasikan lewat EIP-7702; maka berlaku aturan kontrak tujuan (lihat
-  [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) bagian EIP-7702: Counter tanpa `receive()` membuat transfer
-  ETH polos revert).
+  [EVM 02 - Account Model](../EVM%2002%20-%20Account%20Model.md) bagian EIP-7702: kontrak tujuan tanpa `receive()` membuat
+  transfer ETH polos revert).
+
+## Coba sendiri
+
+1. Tulis kontrak dengan fungsi `payable`, fungsi non-payable, `receive()`, dan `fallback()`
+   dalam beberapa variasi (tanpa keduanya, hanya `receive()`, `fallback()` non-payable).
+2. Uji setiap baris tabel "Akibat alur ini" dengan test Foundry. Kirim ETH polos dengan
+   `address(target).call{value: 1 ether}("")`.
+3. Lihat pemeriksaan `CALLVALUE` di bytecode dengan `forge inspect … deployedBytecode | cast disassemble`.
+4. Buat dua penerima (`receive()` hanya `emit` dan `receive()` yang menulis storage), lalu
+   kirim ETH ke keduanya dengan `transfer`, `send`, dan `call`.
+5. Kirim ETH lewat `selfdestruct` ke kontrak tanpa `receive()`, lalu cek saldonya.
+
+```bash
+forge test --match-path test/Payable.t.sol -vv
+```
 
 ---
 
